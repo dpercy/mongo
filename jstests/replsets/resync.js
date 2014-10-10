@@ -31,7 +31,7 @@ replTest.stop(BID);
 
 // insert enough to cycle oplog
 var bulk = A.foo.initializeUnorderedBulkOp();
-for (i=2; i < 10000; i++) {
+for (i=2; i < 20000; i++) {
     bulk.insert({x:i});
 }
 // wait for secondary to also have its oplog cycle
