@@ -244,9 +244,12 @@ namespace QueryStageCollectionScan {
     class QueryStageCollscanInvalidateUpcomingObject : public QueryStageCollectionScanBase {
     public:
         void run() {
-            Client::WriteContext ctx(&_txn, ns());
+            // these locks are basically a Client::WriteContext, but without the WriteUnitOfWork
+            Lock::DBLock dblk(_txn.lockState(), NamespaceString(ns()).db(), MODE_IX);
+            Lock::CollectionLock collk(_txn.lockState(), ns(), MODE_IX);
+            Client::Context cliCtx(&_txn, ns());
 
-            Collection* coll = ctx.getCollection();
+            Collection* coll = cliCtx.db()->getCollection(&_txn, ns());
 
             // Get the DiskLocs that would be returned by an in-order scan.
             vector<DiskLoc> locs;
@@ -293,7 +296,6 @@ namespace QueryStageCollectionScan {
                     ++count;
                 }
             }
-            ctx.commit();
 
             ASSERT_EQUALS(numObj(), count);
         }
@@ -307,8 +309,12 @@ namespace QueryStageCollectionScan {
     class QueryStageCollscanInvalidateUpcomingObjectBackward : public QueryStageCollectionScanBase {
     public:
         void run() {
-            Client::WriteContext ctx(&_txn, ns());
-            Collection* coll = ctx.getCollection();
+            // these locks are basically a Client::WriteContext, but without the WriteUnitOfWork
+            Lock::DBLock dblk(_txn.lockState(), NamespaceString(ns()).db(), MODE_IX);
+            Lock::CollectionLock collk(_txn.lockState(), ns(), MODE_IX);
+            Client::Context cliCtx(&_txn, ns());
+
+            Collection* coll = cliCtx.db()->getCollection(&_txn, ns());
 
             // Get the DiskLocs that would be returned by an in-order scan.
             vector<DiskLoc> locs;
@@ -355,7 +361,6 @@ namespace QueryStageCollectionScan {
                     ++count;
                 }
             }
-            ctx.commit();
 
             ASSERT_EQUALS(numObj(), count);
         }
