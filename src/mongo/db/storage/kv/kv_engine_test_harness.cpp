@@ -49,11 +49,13 @@ namespace mongo {
         };
     }
 
+    // Check that createRecordStore and getRecordStore return a usable RecordStore
     TEST( KVEngineTestHarness, SimpleRS1 ) {
         scoped_ptr<KVHarnessHelper> helper( KVHarnessHelper::create() );
         KVEngine* engine = helper->getEngine();
         ASSERT( engine );
 
+        // Check that the returned RecordStore is non-null
         string ns = "a.b";
         scoped_ptr<RecordStore> rs;
         {
@@ -64,6 +66,7 @@ namespace mongo {
         }
 
 
+        // Check that inserting a record succeeds, and get its DiskLoc
         DiskLoc loc;
         {
             MyOperationContext opCtx( engine );
@@ -74,6 +77,7 @@ namespace mongo {
             uow.commit();
         }
 
+        // Check that retrieving the record succeeds and returns the correct data
         {
             MyOperationContext opCtx( engine );
             ASSERT_EQUALS( string("abc"), rs->dataFor( &opCtx, loc ).data() );
@@ -81,11 +85,13 @@ namespace mongo {
 
     }
 
+    // Check that records persist even after KVHarnessHelper::restartEngine()
     TEST( KVEngineTestHarness, Restart1 ) {
         scoped_ptr<KVHarnessHelper> helper( KVHarnessHelper::create() );
         KVEngine* engine = helper->getEngine();
         ASSERT( engine );
 
+        // Check that the returned RecordStore is non-null
         string ns = "a.b";
         scoped_ptr<RecordStore> rs;
         {
@@ -96,6 +102,7 @@ namespace mongo {
         }
 
 
+        // Check that inserting a record succeeds, and get its DiskLoc
         DiskLoc loc;
         {
             MyOperationContext opCtx( engine );
@@ -106,6 +113,7 @@ namespace mongo {
             uow.commit();
         }
 
+        // Check that retrieving the record succeeds and returns the correct data
         {
             MyOperationContext opCtx( engine );
             ASSERT_EQUALS( string("abc"), rs->dataFor( &opCtx, loc ).data() );
@@ -113,6 +121,7 @@ namespace mongo {
 
         engine = helper->restartEngine();
 
+        // Check that retrieving the record works again, even after restarting the kv engine
         {
             MyOperationContext opCtx( engine );
             rs.reset( engine->getRecordStore( &opCtx, ns, ns, CollectionOptions() ) );
@@ -166,7 +175,7 @@ namespace mongo {
             uow.commit();
         }
 
-        {
+       {
             MyOperationContext opCtx( engine );
             WriteUnitOfWork uow( &opCtx );
             ASSERT_OK( catalog->newCollection( &opCtx, "a.b", CollectionOptions() ) );
