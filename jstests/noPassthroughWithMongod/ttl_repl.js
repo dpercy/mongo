@@ -83,9 +83,16 @@ masterdb.runCommand( { collMod : "c",
 rt.awaitReplication();
 
 var newTTLindex = { "key": { "x" : 1 } , "ns": "d.c" , "expireAfterSeconds" : 10000 };
-assert.eq( 1, masterdb.system.indexes.find( newTTLindex ).count(),
+var newTTLindexMatcher = function(ix) {
+   return friendlyEqual(newTTLindex, {
+       key: ix.key,
+       ns: ix.ns,
+       expireAfterSeconds: ix.expireAfterSeconds
+   });
+};
+assert.eq( 1, masterdb.c.getIndexes().filter(newTTLindexMatcher).length,
            "primary index didn't get updated");
-assert.eq( 1, slave1db.system.indexes.find( newTTLindex ).count(),
+assert.eq( 1, slave1db.c.getIndexes().filter(newTTLindexMatcher).length,
            "secondary index didn't get updated");
 
 // finish up

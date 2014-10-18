@@ -45,8 +45,7 @@ createCollectionWithData = function (db, collectionName, dataGenerator) {
     }
 
     // Make sure we actually added all the indexes we thing we added.  +1 for the _id index.
-    assert.eq(db.system.indexes.find({"ns" : db.toString() + "." + collection.getName()}).count(),
-              numIndexes + 1);
+    assert.eq(collection.getIndexes().length, numIndexes + 1);
 
     var numInserted = 0;
     while (dataGenerator.data.hasNext()) {
@@ -65,6 +64,12 @@ createCollectionWithData = function (db, collectionName, dataGenerator) {
     return db.getCollection(collectionName);
 }
 
+function nameComparator(ixa, ixb) {
+    if (ixa.name < ixb.name) return -1;
+    if (ixa.name > ixb.name) return +1;
+    return 0;
+}
+
 // Class to save the state of a collection and later compare the current state of a collection to
 // the saved state
 function CollectionDataValidator() {
@@ -78,7 +83,7 @@ function CollectionDataValidator() {
     this.recordCollectionData = function (collection) {
 
         // Save the indexes for this collection for later comparison
-        indexData = collection.getDB().system.indexes.find({"ns" : collection.getFullName()}).sort({"name":1}).toArray();
+        indexData = collection.getIndexes().sort(nameComparator);
 
         // Save the data for this collection for later comparison
         collectionData = collection.find().sort({"_id":1}).toArray();
@@ -133,7 +138,8 @@ function CollectionDataValidator() {
         assert.docEq(collectionStats, newCollectionStats, "collection metadata not equal");
 
         // Get the indexes for this collection
-        var newIndexData = collection.getDB().system.indexes.find({"ns" : collection.getFullName()}).sort({"name":1}).toArray();
+        var newIndexData = collection.getIndexes().sort(nameComparator);
+
         for (var i = 0; i < newIndexData.length; i++) {
             assert.docEq(indexData[i], newIndexData[i], "indexes not equal");
         }
@@ -160,7 +166,8 @@ function collectionDataValidatorTests() {
     collection = createCollectionWithData(db, "test", myGenerator);
     myValidator = new CollectionDataValidator();
     myValidator.recordCollectionData(collection);
-    db.test.dropIndex(db.system.indexes.findOne({"key.a": { "$exists" : true } }).key);
+    db.test.dropIndex(db.test.getIndexes().filter(function(ix) { return 'a' in ix.key })[0].key);
+
     assert.throws(myValidator.validateCollectionData, [collection], "Validation function should have thrown since we modified the collection");
 
 
@@ -182,7 +189,7 @@ function collectionDataValidatorTests() {
     collection = createCollectionWithData(db, "test", myGenerator);
     myValidator = new CollectionDataValidator();
     myValidator.recordCollectionData(collection);
-    db.test.dropIndex(db.system.indexes.findOne({"key.a": { "$exists" : true } }).key);
+    db.test.dropIndex(db.test.getIndexes().filter(function(ix) { return 'a' in ix.key })[0].key);
     assert.throws(myValidator.validateCollectionData, [collection], "Validation function should have thrown since we modified the collection");
 
 

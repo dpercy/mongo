@@ -58,11 +58,18 @@ printjson( shard1.getCollection( coll ).stats() );
 
 // Check that TTL index (with expireAfterSeconds field) appears on both shards
 var ttlIndexPattern = { "key": { "x" : 1 } , "ns": ns , "expireAfterSeconds" : 20000 };
+var ttlIndexMatcher = function(ix) {
+    return friendlyEqual(ttlIndexPattern, {
+        key: ix.key,
+        ns: ix.ns,
+        expireAfterSeconds: ix.expireAfterSeconds
+    });
+};
 assert.eq( 1 ,
-           shard0.system.indexes.find( ttlIndexPattern ).count() ,
+           shard0.getCollection( coll ).getIndexes().filter( ttlIndexMatcher ).length,
            "shard0 does not have TTL index");
 assert.eq( 1 ,
-           shard1.system.indexes.find( ttlIndexPattern ).count() ,
+           shard1.getCollection( coll ).getIndexes().filter( ttlIndexMatcher ).length,
            "shard1 does not have TTL index");
 
 // Check that the collMod command successfully updates the expireAfterSeconds field
@@ -70,11 +77,18 @@ s.getDB( dbname ).runCommand( { collMod : coll,
                                 index : { keyPattern : {x : 1}, expireAfterSeconds : 10000} } );
 
 var newTTLindex = { "key": { "x" : 1 } , "ns": ns , "expireAfterSeconds" : 10000 };
+var newTTLindexMatcher = function(ix) {
+    return friendlyEqual(newTTLindex, {
+        key: ix.key,
+        ns: ix.ns,
+        expireAfterSeconds: ix.expireAfterSeconds
+    });
+};
 assert.eq( 1 ,
-           shard0.system.indexes.find( newTTLindex ).count(),
+           shard0.getCollection( coll ).getIndexes().filter( newTTLindexMatcher ).length,
            "shard0 index didn't get updated");
 assert.eq( 1 ,
-           shard1.system.indexes.find( newTTLindex ).count(),
+           shard1.getCollection( coll ).getIndexes().filter( newTTLindexMatcher ).length,
            "shard1 index didn't get updated");
 
 assert.soon(

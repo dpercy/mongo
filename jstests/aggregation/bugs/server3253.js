@@ -14,8 +14,16 @@ function collectionExists(coll) {
     return Array.contains(coll.getDB().getCollectionNames(), coll.getName());
 }
 
+// returns all the indexes the output collection,
+// in some order that is consistent between calls
 function getOutputIndexes() {
-    return db.system.indexes.find({ns: output.getFullName()}).sort({"key":1}).toArray();
+    return output.getIndexes().sort(function(a, b) {
+        a = tojson(a);
+        b = tojson(b);
+        if (a < b) return -1;
+        if (a > b) return +1;
+        return 0;
+    });
 }
 
 function test(input, pipeline, expected) {

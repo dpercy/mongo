@@ -61,8 +61,18 @@ function work() {
     d.a.insert({ _id: 4, x: 22, y: [1, 2, 3] });
     d.a.update({ _id: 4 }, { $inc: { x: 1} });
 
-    // try building an index.  however, be careful as object id's in system.indexes would vary, so we do it manually:
-    d.system.indexes.insert({ _id: 99, ns: "test.a", key: { x: 1 }, name: "x_1", v: 0 });
+    // try building an index.
+    d.runCommand({
+        createIndexes: 'a',
+        indexes: [
+            {
+                ns: "test.a",
+                key: { x: 1 },
+                name: "x_1",
+                v: 0
+            }
+        ]
+    });
 
     log("endwork");
     return d;

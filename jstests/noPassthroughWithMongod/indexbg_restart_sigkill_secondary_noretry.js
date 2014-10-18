@@ -75,7 +75,7 @@ if (0) {
 
     jsTest.log("Starting background indexing");
     masterDB.jstests_bgsec.ensureIndex( {i:1}, {background:true} );
-    assert.eq(2, masterDB.system.indexes.count( {ns:"bgIndexNoRetrySec.jstests_bgsec"} ) );
+    assert.eq(2, masterDB.jstests_bgsec.getIndexes().length );
 
     // Do one more write, so that later on, the secondary doesn't restart with the index build
     // as the last op in the oplog -- it will redo this op otherwise.
@@ -105,12 +105,12 @@ if (0) {
 
     assert_trueTimeout( 
         function() { 
-            return 2 == secondDB.system.indexes.count( {ns:"bgIndexNoRetrySec.jstests_bgsec"} ); 
+            return 2 == secondDB.jstests_bgsec.getIndexes().length; 
         },
         "index created on secondary after restart with --noIndexBuildRetry", 
         30000, 200);
 
-    assert.neq(2, secondDB.system.indexes.count( {ns:"bgIndexNoRetrySec.jstests_bgsec"} ));
+    assert.neq(2, secondDB.jstests_bgsec.getIndexes().length);
     replTest.stopSet();
 }());
 

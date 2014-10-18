@@ -37,6 +37,15 @@ assert( idx[1].unique , "M3" );
 //printjson( idx );
 
 // Test that attempting to create index in an invalid namespace fails.
-assert.writeError(db.system.indexes.insert( { ns : "test" , key : { x : 1 } , name : "x" } ));
+assert.commandFailed(db.runCommand({
+    createIndexes: 'bob',
+    indexes: [
+        {
+            ns: 'test', // should be 'test.bob', or left out
+            key: { x : 1 },
+            name: 'x'
+        }
+    ]
+}));
 
 
