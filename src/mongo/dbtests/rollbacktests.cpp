@@ -40,17 +40,17 @@ using std::list;
 using std::string;
 
 namespace RollbackTests {
-
-    class RollbackCreateCollection {
-    public:
-        RollbackCreateCollection() {
-        }
-        static bool doesCollectionExist( Client::WriteContext* ctx, const string& ns ) {
-            const DatabaseCatalogEntry* dbEntry = ctx->db()->getDatabaseCatalogEntry();
+    namespace {
+        bool doesCollectionExist( Database* db, const string& ns ) {
+            const DatabaseCatalogEntry* dbEntry = db->getDatabaseCatalogEntry();
             list<string> names;
             dbEntry->getCollectionNamespaces( &names );
             return std::find( names.begin(), names.end(), ns ) != names.end();
         }
+    }
+
+    class RollbackCreateCollection {
+    public:
         void run() {
             string ns = "unittests.rollback_create_collection";
             OperationContextImpl txn;
@@ -66,6 +66,59 @@ namespace RollbackTests {
         }
     };
 
+    class RollbackDropCollection {
+    public:
+        void run() {
+            string ns = "unittests.rollback_drop_collection";
+            OperationContextImpl txn;
+            Client::WriteContext ctx( &txn, ns );
+
+            {
+                WriteUnitOfWork uow( &txn );
+                ASSERT( !doesCollectionExist( &ctx, ns ) );
+                ASSERT_OK( userCreateNS( &txn, ctx.db(), ns, BSONObj(), false ) );
+                uow.commit();
+            }
+            ASSERT( doesCollectionExist( &ctx, ns ) );
+
+            {
+                WriteUnitOfWork uow( &txn );
+                ASSERT( doesCollectionExist( &ctx, ns ) );
+                ASSERT_OK( ctx.db()->dropCollection( &txn, ns ) );
+                ASSERT( !doesCollectionExist( &ctx, ns ) );
+                // no commit
+            }
+            ASSERT( doesCollectionExist( &ctx, ns ) );
+        }
+    };
+
+    class RollbackRenameCollection {
+    public:
+        void run() {
+            string nsSrc  = "unittests.rollback_rename_collection_src";
+            string nsDest = "unittests.rollback_rename_collection_dest";
+            OperationContextImpl txn;
+            Lock::GlobalWrite globalWriteLock(txn->lockState());
+
+            {
+                WriteUnitOfWork uow( &txn );
+                ASSERT( !doesCollectionExist( &ctx, ns ) );
+                ASSERT_OK( userCreateNS( &txn, ctx.db(), ns, BSONObj(), false ) );
+                uow.commit();
+            }
+            ASSERT( doesCollectionExist( &ctx, ns ) );
+
+            {
+                WriteUnitOfWork uow( &txn );
+                ASSERT( doesCollectionExist( &ctx, ns ) );
+                ASSERT_OK( ctx.db()->dropCollection( &txn, ns ) );
+                ASSERT( !doesCollectionExist( &ctx, ns ) );
+                // no commit
+            }
+            ASSERT( doesCollectionExist( &ctx, ns ) );
+        }
+    };
+
     class All : public Suite {
     public:
         All() : Suite( "rollback" ) {
@@ -73,6 +126,8 @@ namespace RollbackTests {
 
         void setupTests() {
             add< RollbackCreateCollection >();
+            add< RollbackRenameCollection >();
+            add< RollbackDropCollection >();
         }
     } myall;
 
