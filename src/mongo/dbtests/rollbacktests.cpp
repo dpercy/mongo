@@ -40,9 +40,10 @@ using std::list;
 using std::string;
 
 namespace RollbackTests {
+
     namespace {
-        bool doesCollectionExist( Database* db, const string& ns ) {
-            const DatabaseCatalogEntry* dbEntry = db->getDatabaseCatalogEntry();
+        bool doesCollectionExist( Client::Context* ctx, const string& ns ) {
+            const DatabaseCatalogEntry* dbEntry = ctx->db()->getDatabaseCatalogEntry();
             list<string> names;
             dbEntry->getCollectionNamespaces( &names );
             return std::find( names.begin(), names.end(), ns ) != names.end();
@@ -54,7 +55,10 @@ namespace RollbackTests {
         void run() {
             string ns = "unittests.rollback_create_collection";
             OperationContextImpl txn;
-            Client::WriteContext ctx( &txn, ns );
+            NamespaceString nss( ns );
+
+            Lock::DBLock dbXLock( txn.lockState(), nss.db(), MODE_X );
+            Client::Context ctx( &txn, ns );
             {
                 WriteUnitOfWork uow( &txn );
                 ASSERT( !doesCollectionExist( &ctx, ns ) );
