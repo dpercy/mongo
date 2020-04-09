@@ -196,9 +196,13 @@ bool Scope::execFile(const string& filename, bool printResult, bool reportError,
 class Scope::StoredFuncModLogOpHandler : public RecoveryUnit::Change {
 public:
     void commit(boost::optional<Timestamp>) {
-        _lastVersion.fetchAndAdd(1);
+        auto oldVersion = _lastVersion.fetchAndAdd(1);
+        auto newVersion = oldVersion + 1;
+        LOGV2_ERROR(4716800, "bump _lastVersion to {newVersion}; I am {this}", "newVersion"_attr=newVersion, "this"_attr=(uint64_t)(void*)this);
     }
-    void rollback() {}
+    void rollback() {
+        LOGV2_ERROR(4716801, "bump _lastVersion thing got rolled back; I am {this}", "this"_attr=(uint64_t)(void*)this);
+    }
 };
 
 void Scope::storedFuncMod(OperationContext* opCtx) {
@@ -213,7 +217,7 @@ void Scope::validateObjectIdString(const string& str) {
 
 void Scope::loadStored(OperationContext* opCtx, bool ignoreNotConnected) {
     if (!getGlobalScriptEngine()->_disableLoadStored)
-        return;
+        invariant(0 &&  "why?");
     if (_localDBName.size() == 0) {
         if (ignoreNotConnected)
             return;
@@ -221,7 +225,9 @@ void Scope::loadStored(OperationContext* opCtx, bool ignoreNotConnected) {
     }
 
     int64_t lastVersion = _lastVersion.load();
-    if (_loadedVersion == lastVersion)
+    LOGV2_ERROR(4716802, "Scope({this}) lastVersion check {equal} last={lastVersion} loaded={loadedVersion}", "this"_attr=(uint64_t)(void*)this, "equal"_attr=(_loadedVersion == lastVersion), "_lastVersion"_attr=lastVersion, "_loadedVersion"_attr=_loadedVersion);
+    if (//false /* Always reload! */&&
+        _loadedVersion == lastVersion)
         return;
 
     _loadedVersion = lastVersion;
@@ -258,6 +264,7 @@ void Scope::loadStored(OperationContext* opCtx, bool ignoreNotConnected) {
             stdx::this_thread::sleep_for(stdx::chrono::seconds(1));
         }
 
+        LOGV2_ERROR(4716803, "Scope({this}) assign {name} = {value}", "this"_attr=(uint64_t)(void*)this, "name"_attr=n, "value"_attr=v);
         try {
             setElement(n.valuestr(), v, o);
             thisTime.insert(n.valuestr());
@@ -277,6 +284,7 @@ void Scope::loadStored(OperationContext* opCtx, bool ignoreNotConnected) {
     // remove things from scope that were removed from the system.js collection
     for (set<string>::iterator i = _storedNames.begin(); i != _storedNames.end();) {
         if (thisTime.count(*i) == 0) {
+            LOGV2_ERROR(4716804, "Scope({this}) delete {name}", "this"_attr=(uint64_t)(void*)this, "name"_attr=*i);
             string toDelete = str::stream() << "delete " << *i;
             _storedNames.erase(i++);
             execSetup(toDelete, "clean up scope");
