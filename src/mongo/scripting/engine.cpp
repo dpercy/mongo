@@ -198,10 +198,10 @@ public:
     void commit(boost::optional<Timestamp>) {
         auto oldVersion = _lastVersion.fetchAndAdd(1);
         auto newVersion = oldVersion + 1;
-        LOGV2_ERROR(4716800, "bump _lastVersion to {newVersion}; I am {this}", "newVersion"_attr=newVersion, "this"_attr=(uint64_t)(void*)this);
+        LOGV2_ERROR(4716800, "bump _lastVersion", "newVersion"_attr=newVersion, "this"_attr=(uint64_t)(void*)this);
     }
     void rollback() {
-        LOGV2_ERROR(4716801, "bump _lastVersion thing got rolled back; I am {this}", "this"_attr=(uint64_t)(void*)this);
+        LOGV2_ERROR(4716801, "rollback?? _lastVersion", "this"_attr=(uint64_t)(void*)this);
     }
 };
 
@@ -225,12 +225,15 @@ void Scope::loadStored(OperationContext* opCtx, bool ignoreNotConnected) {
     }
 
     int64_t lastVersion = _lastVersion.load();
-    LOGV2_ERROR(4716802, "Scope({this}) lastVersion check {equal} last={lastVersion} loaded={loadedVersion}", "this"_attr=(uint64_t)(void*)this, "equal"_attr=(_loadedVersion == lastVersion), "_lastVersion"_attr=lastVersion, "_loadedVersion"_attr=_loadedVersion);
+    LOGV2_ERROR(4716802, "lastVersion check", "this"_attr=(uint64_t)(void*)this, "equal"_attr=(_loadedVersion == lastVersion), "_lastVersion"_attr=lastVersion, "_loadedVersion"_attr=_loadedVersion);
+    ON_BLOCK_EXIT([&] {
+        LOGV2_ERROR(4716807, "done", "this"_attr=(uint64_t)(void*)this, "_loadedVersion"_attr=_loadedVersion);
+    });
     if (//false /* Always reload! */&&
         _loadedVersion == lastVersion)
         return;
 
-    _loadedVersion = lastVersion;
+    //_loadedVersion = lastVersion; // should only happen on success
     NamespaceString coll(_localDBName, "system.js");
 
     auto directDBClient = DBDirectClientFactory::get(opCtx).create(opCtx);
@@ -264,13 +267,14 @@ void Scope::loadStored(OperationContext* opCtx, bool ignoreNotConnected) {
             stdx::this_thread::sleep_for(stdx::chrono::seconds(1));
         }
 
-        LOGV2_ERROR(4716803, "Scope({this}) assign {name} = {value}", "this"_attr=(uint64_t)(void*)this, "name"_attr=n, "value"_attr=v);
+        LOGV2_ERROR(4716803, "assign", "this"_attr=(uint64_t)(void*)this, "name"_attr=n, "value"_attr=v);
         try {
             setElement(n.valuestr(), v, o);
             thisTime.insert(n.valuestr());
             _storedNames.insert(n.valuestr());
         } catch (const DBException& setElemEx) {
             if (setElemEx.code() == ErrorCodes::Interrupted) {
+                LOGV2_ERROR(4716805, "interrupted during assign", "this"_attr=(uint64_t)(void*)this, "name"_attr=n, "value"_attr=v);
                 throw;
             }
 
@@ -284,7 +288,7 @@ void Scope::loadStored(OperationContext* opCtx, bool ignoreNotConnected) {
     // remove things from scope that were removed from the system.js collection
     for (set<string>::iterator i = _storedNames.begin(); i != _storedNames.end();) {
         if (thisTime.count(*i) == 0) {
-            LOGV2_ERROR(4716804, "Scope({this}) delete {name}", "this"_attr=(uint64_t)(void*)this, "name"_attr=*i);
+            LOGV2_ERROR(4716804, "delete", "this"_attr=(uint64_t)(void*)this, "name"_attr=*i);
             string toDelete = str::stream() << "delete " << *i;
             _storedNames.erase(i++);
             execSetup(toDelete, "clean up scope");
@@ -292,6 +296,10 @@ void Scope::loadStored(OperationContext* opCtx, bool ignoreNotConnected) {
             ++i;
         }
     }
+
+    // Only record _loadedVersion on success.
+    LOGV2_ERROR(4716806, "success: bump _loadedVersion", "this"_attr=(uint64_t)(void*)this, "_loadedVersion"_attr=lastVersion);
+    _loadedVersion = lastVersion;
 }
 
 ScriptingFunction Scope::createFunction(const char* code) {
