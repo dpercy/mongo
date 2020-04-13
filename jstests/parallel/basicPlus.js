@@ -6,7 +6,40 @@ c.drop();
 
 Random.setRandomSeed();
 
-var params = ParallelTester.createJstestsLists(4);
+var params = [
+    [
+      "0",
+      "jstests/core/system_js_access.js",
+      "jstests/core/system_js_access.js",
+      "jstests/core/system_js_access.js",
+      "jstests/core/system_js_access.js",
+      "jstests/core/system_js_access.js",
+      "jstests/core/system_js_access.js",
+      "jstests/core/system_js_access.js",
+      "jstests/core/system_js_access.js",
+      "jstests/core/system_js_access.js",
+      "jstests/core/system_js_access.js",
+    ],
+    [
+      "1",
+      "jstests/core/find_and_modify_concurrent_update.js",
+      "jstests/core/find_and_modify_concurrent_update.js",
+      "jstests/core/find_and_modify_concurrent_update.js",
+      "jstests/core/find_and_modify_concurrent_update.js",
+      "jstests/core/find_and_modify_concurrent_update.js",
+      "jstests/core/find_and_modify_concurrent_update.js",
+      "jstests/core/find_and_modify_concurrent_update.js",
+      "jstests/core/find_and_modify_concurrent_update.js",
+      "jstests/core/find_and_modify_concurrent_update.js",
+      "jstests/core/find_and_modify_concurrent_update.js",
+    ],
+    [
+      "2",
+    ],
+    [
+      "3",
+    ],
+];
 var t = new ParallelTester();
 for (i in params) {
     t.add(ParallelTester.fileTester, params[i]);
