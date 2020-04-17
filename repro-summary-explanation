@@ -1,0 +1,16 @@
+// After conn37 inserts into system.js, the on-commit handler bumps a global atomic counter called _lastVersion.
+{"s":"E", "c":"-",       "id":4716800,"ctx":"CONN37","msg":"bump _lastVersion",           "attr":{"newVersion":16,"this":140688263241952}}
+
+// conn33 sees the new counter value, 16.
+// But it doesn't see the isAdult document in the collection, so it thinks the Scope shouldn't have the isAdult function loaded.
+// It deletes isAdult from the Scope and marks the Scope up-to-date by setting _loadedVersion = _lastVersion = 16.
+{"s":"E", "c":"-",       "id":4716802,"ctx":"conn33","msg":"lastVersion check",           "attr":{"this":140687936699296,"equal":false,"_lastVersion":16,"_loadedVersion":14}}
+{"s":"E", "c":"-",       "id":4716804,"ctx":"conn33","msg":"delete",                      "attr":{"this":140687936699296,"name":"isAdult"}}
+{"s":"E", "c":"-",       "id":4716806,"ctx":"conn33","msg":"success: bump _loadedVersion","attr":{"this":140687936699296,"_loadedVersion":16}}
+{"s":"E", "c":"-",       "id":4716807,"ctx":"conn33","msg":"done",                        "attr":{"this":140687936699296,"_loadedVersion":16}}
+
+// Later, conn37 gets the same Scope out of the pool.
+// conn33 has marked it up-to-date, so conn37 doesn't load anything from system.js.
+// Soon after this, conn37 gets a JS ReferenceError trying to call isAdult which isn't loaded into this Scope.
+{"s":"E", "c":"-",       "id":4716802,"ctx":"CONN37","msg":"lastVersion check",           "attr":{"this":140687936699296,"equal":true,"_lastVersion":16,"_loadedVersion":16}}
+{"s":"E", "c":"-",       "id":4716807,"ctx":"CONN37","msg":"done",                        "attr":{"this":140687936699296,"_loadedVersion":16}}
