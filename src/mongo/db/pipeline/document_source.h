@@ -515,6 +515,8 @@ public:
 
     struct Sorts {
         std::set<SortPattern> sorts;
+
+        Value serialize() const;
     };
 
     /**

@@ -256,7 +256,10 @@ Pipeline::SourceContainer::iterator DocumentSourceGroup::doOptimizeAt(
     auto begin = container->begin();
     if (itr != begin) {
         auto prev = std::prev(itr);
-        _inputSorts = (*prev)->getOutputSorts(begin, prev);
+        auto sorts = (*prev)->getOutputSorts(begin, prev);
+        for (auto s : sorts.sorts) {
+            _inputSorts.sorts.insert(s);
+        }
     }
     return std::next(itr);
 }
@@ -307,6 +310,10 @@ Value DocumentSourceGroup::serialize(boost::optional<ExplainOptions::Verbosity> 
         // This makes the output unparsable (with error) on pre 2.6 shards, but it will never
         // be sent to old shards when this flag is true since they can't do a merge anyway.
         insides["$doingMerge"] = Value(true);
+    }
+
+    if (explain) {
+        insides["_inputSorts"] = _inputSorts.serialize();
     }
 
     return Value(DOC(getSourceName() << insides.freeze()));

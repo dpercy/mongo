@@ -250,4 +250,12 @@ void DocumentSource::serializeToArray(vector<Value>& array,
     }
 }
 
+Value DocumentSource::Sorts::serialize() const {
+    std::vector<Value> result;
+    for (auto s : sorts) {
+        result.emplace_back(s.serialize(SortPattern::SortKeySerialization::kForExplain));
+    }
+    return Value(result);
+}
+
 }  // namespace mongo
