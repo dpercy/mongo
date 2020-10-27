@@ -117,4 +117,72 @@ DocumentSource::GetModPathsReturn DocumentSourceSingleDocumentTransformation::ge
     return _parsedTransform->getModifiedPaths();
 }
 
+DocumentSource::Sorts DocumentSourceSingleDocumentTransformation::getOutputSorts(
+    Pipeline::SourceContainer::iterator begin, Pipeline::SourceContainer::iterator it) const {
+    if (it == begin)
+        return {};
+
+    // Stages like $project and $set can both add new sorts, and invalidate existing sorts.
+    // {$set: {x: "$a"}} invalidates any sort involving $x.
+    // It also duplicates any sort involving $a.
+
+    // The bindings take effect simultaneously: for example, {$set: {a: "$b", b: "$a"}} swaps a and
+    // b. This means we can't process one binding at a time, and we can't easily split the work
+    // into separate phases. We have to build a map describing the renames and apply it in one step.
+
+    std::map<FieldPath, std::vector<FieldPath>> oldToNew;
+    bool keepOther;
+
+    auto mod = getModifiedPaths();
+    switch (mod.type) {
+        case DocumentSource::GetModPathsReturn::Type::kFiniteSet: {
+            // If we modify only a finite set of paths, then each path in 'mod.paths' represents
+            // a path that we've lost information about. Its value is not available under any new name.
+            for (auto lostName : mod.paths) {
+                oldToNew[lostName] = {};
+            }
+            // Each entry [new, old] in 'mod.paths' means two things:
+            // 1. 'old' is available under a new name, 'new'.
+            // 2. 'new' is lost, unless it was simultaneously renamed.
+            for (auto [newName, oldName] : mod.renames) {
+                oldToNew[oldName].push_back(newName);
+            }
+            for (auto [newName, oldName] : mod.renames) {
+                if (oldToNew.find(newName) != oldToNew.end()) {
+                    // 'new' was renamed, so it's not lost.
+                } else {
+                    // 'new' is overwritten and not renamed, so it's lost.
+                    oldToNew[newName] = {};
+                }
+            }
+            // Any paths not mentioned in the 'mod.paths' or 'mod.renames' are preserved.
+            keepOther = true;
+        } break;
+        case DocumentSource::GetModPathsReturn::Type::kAllExcept: {
+            // If we modify all but a finite set of paths, then each path in 'mod.paths' represents
+            // a preserved path.
+            for (auto keptName : mod.paths) {
+                oldToNew[keptName] = {keptName};
+            }
+            // Each entry [new, old] in 'mod.paths' means two things:
+            // 1. 'old' is available under a new name, 'new'.
+            // 2. 'new' is lost, unless it was simultaneously renamed.
+            // However, the second part happens implicitly, because every field not renamed or
+            // preserved is lost.
+            for (auto [newName, oldName] : mod.renames) {
+                oldToNew[oldName].push_back(newName);
+            }
+            // Any paths not mentioned in the 'mod.paths' or 'mod.renames' are lost.
+            keepOther = false;
+        } break;
+        // In all other cases, we don't have enough information to determine which sort orders are
+        // preserved.
+        default: return {};
+    }
+
+    auto prev = std::prev(it);
+    auto prevSorts = (*prev)->getOutputSorts(begin, prev);
+    return prevSorts.rename(oldToNew, keepOther);
+}
+
 }  // namespace mongo

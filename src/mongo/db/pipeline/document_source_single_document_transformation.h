@@ -94,6 +94,9 @@ public:
         return *_parsedTransform;
     }
 
+    Sorts getOutputSorts(Pipeline::SourceContainer::iterator begin,
+                         Pipeline::SourceContainer::iterator it) const final;
+
 protected:
     GetNextResult doGetNext() final;
     void doDispose() final;

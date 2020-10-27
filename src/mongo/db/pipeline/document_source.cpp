@@ -286,4 +286,85 @@ Value DocumentSource::GetModPathsReturn::serialize() const {
     return result.freezeToValue();
 }
 
+namespace {
+
+std::set<SortPattern::SortPatternPart> renamePart(
+    const SortPattern::SortPatternPart& part,
+    const std::map<FieldPath, std::vector<FieldPath>>& oldToNew,
+    bool keepOther) {
+    std::set<SortPattern::SortPatternPart> result;
+
+    // TODO for now, assume expression sorts are never preserved.
+    if (auto fieldPath = part.fieldPath) {
+        invariant(!part.expression);
+
+        // Consider each prefix of the fieldPath:
+        // if it has a map entry then generate zero or more renamed fieldPaths;
+        // if it has no map entry then use 'keepOther' to decide whether to drop or keep it.
+        for (size_t i = 0; i < fieldPath->getPathLength(); ++i) {
+            // 'i' is the index of the last component of the prefix.
+            FieldPath prefix = fieldPath->getSubpath(i);
+
+            // Lookup prefix in the map, treating absent as a noop rename.
+            std::vector<FieldPath> renamed;
+            auto iter = oldToNew.find(prefix);
+            if (iter == oldToNew.end()) {
+                // No explicit map entry:
+                // if keepOther then pretend we had an entry mapping it to itself;
+                // otherwise pretend we had an entry mapping it to zero new names.
+                if (keepOther)
+                    renamed.push_back(*fieldPath);
+            } else {
+                copy(iter->second.begin(), iter->second.end(), std::back_inserter(renamed));
+            }
+
+            // Generate zero or more renamed Parts into result.
+            for (auto renamedPath : renamed) {
+                result.insert({part.isAscending, renamedPath, nullptr});
+            }
+        }
+    }
+
+    return result;
+}
+
+// Rename each component of the 'original' SortPattern and insert the result into 'result'.
+// 'prefix' is a renamed prefix of the original.
+// This function may append to 'prefix' in place; caller can resize it to undo the changes.
+void renameInto(
+    std::vector<SortPattern::SortPatternPart>& prefix,
+    const SortPattern& original,
+    const std::map<FieldPath, std::vector<FieldPath>>& oldToNew,
+    bool keepOther,
+    DocumentSource::Sorts& result) {
+    size_t i = prefix.size();
+    if (i == original.size()) {
+        // All parts have been renamed.
+        result.sorts.emplace(prefix);
+    } else {
+        // Consider all renamings of the first part.
+        for (auto part : renamePart(original.begin()[i], oldToNew, keepOther)) {
+            prefix.push_back(part);
+            renameInto(prefix, original, oldToNew, keepOther, result);
+            prefix.resize(i);
+        }
+    }
+}
+
+}  // namespace
+
+DocumentSource::Sorts DocumentSource::Sorts::rename(
+    const std::map<FieldPath, std::vector<FieldPath>>& oldToNew,
+    bool keepOther) const {
+    Sorts result;
+    for (auto s : sorts) {
+        // If s is {a, b, c}, and we rename b -> [x] and c -> [y, z],
+        // we need to generate {a, x, y} and {a, x, z}.
+        // Each sort is a tuple, so the renamed sort is a cross product of the renamed components.
+        std::vector<SortPattern::SortPatternPart> prefix;
+        renameInto(prefix, s, oldToNew, keepOther, result);
+    }
+    return result;
+}
+
 }  // namespace mongo

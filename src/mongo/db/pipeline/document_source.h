@@ -519,6 +519,14 @@ public:
         std::set<SortPattern> sorts;
 
         Value serialize() const;
+
+        // A field can be mapped to more than one new name.
+        // To represent a dropped field, map it to an empty vector.
+        // Since a FieldPath can be dotted, renaming a -> b also has the effect of
+        // renaming a.x -> b.x, etc: a path is renamed if any prefix is renamed.
+        // If a field does not occur in the map, 'keepOther' determines whether it
+        // is preserved or dropped.
+        Sorts rename(const std::map<FieldPath, std::vector<FieldPath>>& oldToNew, bool keepOther) const;
     };
 
     /**
