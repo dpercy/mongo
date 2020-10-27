@@ -177,6 +177,9 @@ public:
     std::unique_ptr<GroupFromFirstDocumentTransformation> rewriteGroupAsTransformOnFirstDocument()
         const;
 
+    Pipeline::SourceContainer::iterator doOptimizeAt(
+        Pipeline::SourceContainer::iterator itr, Pipeline::SourceContainer* container) final;
+
 protected:
     GetNextResult doGetNext() final;
     void doDispose() final;
@@ -287,6 +290,8 @@ private:
     std::unique_ptr<Sorter<Value, Value>::Iterator> _sorterIterator;
 
     std::pair<Value, Value> _firstPartOfNextGroup;
+
+    DocumentSource::Sorts _inputSorts;
 };
 
 }  // namespace mongo

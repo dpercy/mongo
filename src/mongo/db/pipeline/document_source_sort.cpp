@@ -253,6 +253,18 @@ boost::optional<DocumentSource::DistributedPlanLogic> DocumentSourceSort::distri
     return split;
 }
 
+DocumentSource::Sorts DocumentSourceSort::getOutputSorts(
+    Pipeline::SourceContainer::iterator begin, Pipeline::SourceContainer::iterator it) const {
+    // Add all (nonempty) prefixes.
+    DocumentSource::Sorts result;
+    std::vector<SortPattern::SortPatternPart> prefix;
+    for (auto part : _sortExecutor->sortPattern()) {
+        prefix.push_back(part);
+        result.sorts.emplace(prefix);
+    }
+    return result;
+}
+
 bool DocumentSourceSort::canRunInParallelBeforeWriteStage(
     const std::set<std::string>& nameOfShardKeyFieldsUponEntryToStage) const {
     // This is an interesting special case. If there are no further stages which require merging the

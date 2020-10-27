@@ -250,6 +250,17 @@ void DocumentSourceGroup::doDispose() {
     groupsIterator = _groups->end();
 }
 
+Pipeline::SourceContainer::iterator DocumentSourceGroup::doOptimizeAt(
+    Pipeline::SourceContainer::iterator itr, Pipeline::SourceContainer* container) {
+
+    auto begin = container->begin();
+    if (itr != begin) {
+        auto prev = std::prev(itr);
+        _inputSorts = (*prev)->getOutputSorts(begin, prev);
+    }
+    return std::next(itr);
+}
+
 intrusive_ptr<DocumentSource> DocumentSourceGroup::optimize() {
     // TODO: If all _idExpressions are ExpressionConstants after optimization, then we know there
     // will be only one group. We should take advantage of that to avoid going through the hash

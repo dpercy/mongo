@@ -513,6 +513,21 @@ public:
         return false;
     }
 
+    struct Sorts {
+        std::set<SortPattern> sorts;
+    };
+
+    /**
+     * Return all known output sorts of this stage. The answer may depend on previous stages:
+     * implementations may look at any element in the inclusive range [begin, it]. 'it' points
+     * at this.
+     */
+    virtual Sorts getOutputSorts(
+        Pipeline::SourceContainer::iterator begin, Pipeline::SourceContainer::iterator it) const {
+        invariant(*it == this);
+        return {};
+    }
+
 protected:
     DocumentSource(const StringData stageName,
                    const boost::intrusive_ptr<ExpressionContext>& pExpCtx);
