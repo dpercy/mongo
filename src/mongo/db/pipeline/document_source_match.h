@@ -194,6 +194,9 @@ public:
         return boost::none;
     }
 
+    Sorts getOutputSorts(Pipeline::SourceContainer::iterator begin,
+                         Pipeline::SourceContainer::iterator it) const final;
+
 protected:
     DocumentSourceMatch(const DocumentSourceMatch& other)
         : DocumentSourceMatch(

@@ -510,4 +510,12 @@ void DocumentSourceMatch::rebuild(BSONObj filter) {
     getDependencies(&_dependencies);
 }
 
+DocumentSource::Sorts DocumentSourceMatch::getOutputSorts(
+    Pipeline::SourceContainer::iterator begin, Pipeline::SourceContainer::iterator it) const {
+    if (it == begin)
+        return {};
+    auto prev = std::prev(it);
+    return (*prev)->getOutputSorts(begin, prev);
+}
+
 }  // namespace mongo
