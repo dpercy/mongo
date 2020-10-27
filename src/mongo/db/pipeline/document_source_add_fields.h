@@ -59,9 +59,9 @@ public:
         BSONElement elem, const boost::intrusive_ptr<ExpressionContext>& expCtx);
 
 private:
-    // It is illegal to construct a DocumentSourceAddFields directly, use create() or
-    // createFromBson() instead.
-    DocumentSourceAddFields() = default;
+    // Use create() or createFromBson() instead; internally, DocumentSourceAddFields doesn't exist:
+    // it's a factory for DocumentSourceSingleDocumentTransformation.
+    DocumentSourceAddFields() = delete;
 };
 
 }  // namespace mongo
