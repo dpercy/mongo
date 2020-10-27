@@ -305,7 +305,7 @@ std::set<SortPattern::SortPatternPart> renamePart(
             // 'i' is the index of the last component of the prefix.
             FieldPath prefix = fieldPath->getSubpath(i);
 
-            // Lookup prefix in the map, treating absent as a noop rename.
+            // Lookup prefix in the map.
             std::vector<FieldPath> renamed;
             auto iter = oldToNew.find(prefix);
             if (iter == oldToNew.end()) {
