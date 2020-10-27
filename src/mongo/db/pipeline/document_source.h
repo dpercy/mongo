@@ -461,6 +461,8 @@ public:
         // This stage should return kAllExcept, since it modifies all paths other than "a". It can
         // also fill out 'renames' with the mapping "b" => "c".
         StringMap<std::string> renames;
+
+        Value serialize() const;
     };
 
     /**

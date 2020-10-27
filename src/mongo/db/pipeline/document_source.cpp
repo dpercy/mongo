@@ -246,7 +246,12 @@ void DocumentSource::serializeToArray(vector<Value>& array,
                                       boost::optional<ExplainOptions::Verbosity> explain) const {
     Value entry = serialize(explain);
     if (!entry.missing()) {
-        array.push_back(entry);
+        MutableDocument doc{entry.getDocument()};
+
+        // add extra info common to all stages
+        doc["_modPaths"] = getModifiedPaths().serialize();
+
+        array.push_back(doc.freezeToValue());
     }
 }
 
@@ -256,6 +261,29 @@ Value DocumentSource::Sorts::serialize() const {
         result.emplace_back(s.serialize(SortPattern::SortKeySerialization::kForExplain));
     }
     return Value(result);
+}
+
+Value DocumentSource::GetModPathsReturn::serialize() const {
+    MutableDocument result;
+
+    switch (type) {
+        case Type::kNotSupported: result["type"] = Value("kNotSupported"_sd); break;
+        case Type::kAllPaths: result["type"] = Value("kAllPaths"_sd); break;
+        case Type::kFiniteSet: result["type"] = Value("kFiniteSet"_sd); break;
+        case Type::kAllExcept: result["type"] = Value("kAllExcept"_sd); break;
+    }
+
+    std::vector<Value> paths;
+    for (auto p : this->paths) {
+        paths.emplace_back(p);
+    }
+    result["paths"] = Value(paths);
+
+    for (auto [from, to] : renames) {
+        result["renames"][from] = Value(to);
+    }
+
+    return result.freezeToValue();
 }
 
 }  // namespace mongo
