@@ -56,8 +56,8 @@ public:
                 expression == other.expression;
         }
         bool operator<(const SortPatternPart& other) const {
-            return isAscending < other.isAscending || fieldPath < other.fieldPath ||
-                expression < other.expression;
+            return std::make_tuple(isAscending, fieldPath, expression)
+                < std::make_tuple(other.isAscending, other.fieldPath, other.expression);
         }
     };
 
@@ -109,7 +109,8 @@ public:
     }
 
     bool operator<(const SortPattern& other) const {
-        return _sortPattern < other._sortPattern || _paths < other._paths;
+        return std::make_tuple(_sortPattern, _paths)
+            < std::make_tuple(other._sortPattern, other._paths);
     }
 
     std::vector<SortPatternPart>::const_iterator begin() const {
