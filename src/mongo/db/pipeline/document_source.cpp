@@ -315,6 +315,7 @@ std::set<SortPattern::SortPatternPart> renamePart(
                 if (keepOther)
                     renamed.push_back(*fieldPath);
             } else {
+                // TODO wrong: don't just put the prefix into renamed; replace the prefix!
                 copy(iter->second.begin(), iter->second.end(), std::back_inserter(renamed));
             }
 
@@ -328,9 +329,11 @@ std::set<SortPattern::SortPatternPart> renamePart(
     return result;
 }
 
-// Rename each component of the 'original' SortPattern and insert the result into 'result'.
-// 'prefix' is a renamed prefix of the original.
-// This function may append to 'prefix' in place; caller can resize it to undo the changes.
+// Find all renamings of 'original' that start with 'prefix', and insert them into 'result'.
+// 'oldToNew' and 'keepOther' describe which paths are renamed
+// To avoid the overhead of passing an extended copy of 'prefix' to each recursive call,
+// this function is allowed to modify 'prefix' in place, but it must undo its modifications
+// before returning.
 void renameInto(
     std::vector<SortPattern::SortPatternPart>& prefix,
     const SortPattern& original,
@@ -346,7 +349,9 @@ void renameInto(
         for (auto part : renamePart(original.begin()[i], oldToNew, keepOther)) {
             prefix.push_back(part);
             renameInto(prefix, original, oldToNew, keepOther, result);
-            prefix.resize(i);
+            prefix.pop_back();
+
+            invariant(prefix.size() == i);
         }
     }
 }
