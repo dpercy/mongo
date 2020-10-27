@@ -306,21 +306,29 @@ std::set<SortPattern::SortPatternPart> renamePart(
             FieldPath prefix = fieldPath->getSubpath(i);
 
             // Lookup prefix in the map.
-            std::vector<FieldPath> renamed;
+            std::vector<FieldPath> renamedPaths;
             auto iter = oldToNew.find(prefix);
             if (iter == oldToNew.end()) {
                 // No explicit map entry:
                 // if keepOther then pretend we had an entry mapping it to itself;
                 // otherwise pretend we had an entry mapping it to zero new names.
                 if (keepOther)
-                    renamed.push_back(*fieldPath);
+                    renamedPaths.push_back(*fieldPath);
             } else {
-                // TODO wrong: don't just put the prefix into renamed; replace the prefix!
-                copy(iter->second.begin(), iter->second.end(), std::back_inserter(renamed));
+                for (auto renamedPrefix : iter->second) {
+                    // Empty FieldPaths don't exist, so we have two cases: either prefix covers
+                    // all of fieldPath, or there is a nonempty suffix we have to append.
+                    if (i == fieldPath->getPathLength() - 1) {
+                        // prefix == fieldPath
+                        renamedPaths.push_back(*fieldPath);
+                    } else {
+                        renamedPaths.push_back(renamedPrefix.concat(fieldPath->getSuffix(i + 1)));
+                    }
+                }
             }
 
             // Generate zero or more renamed Parts into result.
-            for (auto renamedPath : renamed) {
+            for (auto renamedPath : renamedPaths) {
                 result.insert({part.isAscending, renamedPath, nullptr});
             }
         }

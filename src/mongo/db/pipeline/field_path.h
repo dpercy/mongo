@@ -86,6 +86,15 @@ public:
     }
 
     /**
+     * Get the subpath including path elements [n, len-1].
+     */
+    StringData getSuffix(size_t n) const {
+        invariant(n + 1 < _fieldPathDotPosition.size());
+        size_t firstChar = _fieldPathDotPosition[n] + 1;
+        return StringData(_fieldPath.c_str() + firstChar);
+    }
+
+    /**
      * Return the first path component.
      */
     StringData front() const {
