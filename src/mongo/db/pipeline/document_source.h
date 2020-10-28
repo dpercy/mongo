@@ -445,7 +445,20 @@ public:
         GetModPathsReturn(Type type,
                           std::set<std::string>&& paths,
                           StringMap<std::string>&& renames)
-            : type(type), paths(std::move(paths)), renames(std::move(renames)) {}
+            : GetModPathsReturn(
+                type,
+                std::move(paths),
+                std::move(renames),
+                {}) {}
+
+        GetModPathsReturn(Type type,
+                          std::set<std::string>&& paths,
+                          StringMap<std::string>&& renames,
+                          StringMap<std::string>&& computedMonotonic)
+            : type(type),
+              paths(std::move(paths)),
+              renames(std::move(renames)),
+              computedMonotonic(std::move(computedMonotonic)) {}
 
         Type type;
         std::set<std::string> paths;
@@ -461,6 +474,16 @@ public:
         // This stage should return kAllExcept, since it modifies all paths other than "a". It can
         // also fill out 'renames' with the mapping "b" => "c".
         StringMap<std::string> renames;
+
+        // Some expressions are monotonic: they preserve ordering.
+        // For example, if the input of {$set: {y: {$year: "$ts"}}} is sorted on {ts: 1},
+        // then the output is also sorted on {y: 1}.
+        // In this example, computedMonotonic would map y -> ts because y is computed from ts,
+        // monotonically.
+        //
+        // If a stage reports a field as computedMonotonic, it should also report the field as
+        // modified.
+        StringMap<std::string> computedMonotonic;
 
         Value serialize() const;
     };
