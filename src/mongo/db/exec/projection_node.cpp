@@ -241,20 +241,26 @@ void ProjectionNode::reportProjectedPaths(std::set<std::string>* projectedPaths)
 }
 
 void ProjectionNode::reportComputedPaths(std::set<std::string>* computedPaths,
-                                         StringMap<std::string>* renamedPaths) const {
+                                         StringMap<std::string>* renamedPaths,
+                                         StringMap<std::string>* computedMonotonic) const {
     for (auto&& computedPair : _expressions) {
         // The expression's path is the concatenation of the path to this node, plus the field name
         // associated with the expression.
         auto exprPath = FieldPath::getFullyQualifiedPath(_pathToNode, computedPair.first);
         auto exprComputedPaths = computedPair.second->getComputedPaths(exprPath);
+
         computedPaths->insert(exprComputedPaths.paths.begin(), exprComputedPaths.paths.end());
 
         for (auto&& rename : exprComputedPaths.renames) {
             (*renamedPaths)[rename.first] = rename.second;
         }
+
+        for (auto&& cm : exprComputedPaths.computedMonotonic) {
+            (*computedMonotonic)[cm.first] = cm.second;
+        }
     }
     for (auto&& childPair : _children) {
-        childPair.second->reportComputedPaths(computedPaths, renamedPaths);
+        childPair.second->reportComputedPaths(computedPaths, renamedPaths, computedMonotonic);
     }
 }
 

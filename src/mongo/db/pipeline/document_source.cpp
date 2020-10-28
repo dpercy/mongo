@@ -279,8 +279,12 @@ Value DocumentSource::GetModPathsReturn::serialize() const {
     }
     result["paths"] = Value(paths);
 
-    for (auto [from, to] : renames) {
-        result["renames"][from] = Value(to);
+    for (auto [to, from] : renames) {
+        result["renames"][to] = Value(from);
+    }
+
+    for (auto [to, from] : computedMonotonic) {
+        result["computedMonotonic"][to] = Value(from);
     }
 
     return result.freezeToValue();

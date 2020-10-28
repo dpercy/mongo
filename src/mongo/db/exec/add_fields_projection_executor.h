@@ -97,7 +97,8 @@ public:
     DocumentSource::GetModPathsReturn getModifiedPaths() const final {
         std::set<std::string> computedPaths;
         StringMap<std::string> renamedPaths;
-        _root->reportComputedPaths(&computedPaths, &renamedPaths);
+        StringMap<std::string> computedMonotonic;
+        _root->reportComputedPaths(&computedPaths, &renamedPaths, &computedMonotonic);
         return {DocumentSource::GetModPathsReturn::Type::kFiniteSet,
                 std::move(computedPaths),
                 std::move(renamedPaths)};

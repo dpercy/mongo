@@ -205,7 +205,8 @@ public:
 
         std::set<std::string> computedPaths;
         StringMap<std::string> renamedPaths;
-        _root->reportComputedPaths(&computedPaths, &renamedPaths);
+        StringMap<std::string> computedMonotonic;
+        _root->reportComputedPaths(&computedPaths, &renamedPaths, &computedMonotonic);
 
         return {DocumentSource::GetModPathsReturn::Type::kAllExcept,
                 std::move(preservedPaths),

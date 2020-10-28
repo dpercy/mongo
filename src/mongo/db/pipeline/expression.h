@@ -104,9 +104,12 @@ public:
         // Non-rename computed paths.
         std::set<std::string> paths;
 
-        // Mappings from the old name of a path before applying this expression, to the new one
-        // after applying this expression.
+        // Mappings from the new name of a path after applying this expression, to the old one
+        // before applying this expression.
         StringMap<std::string> renames;
+
+        // Mapping from new name to old name, for monotonic expressions.
+        StringMap<std::string> computedMonotonic;
     };
 
     virtual ~Expression(){};

@@ -118,9 +118,14 @@ public:
      * Computed paths that are identified as the result of a simple rename are instead filled out in
      * 'renamedPaths'. Each entry in 'renamedPaths' maps from the path's new name to its old name
      * prior to application of this projection.
+     * 
+     * Paths that are computed monotonically from one other path are reported in 'computedPaths',
+     * but they are also reported in 'computedMonotonic'. Each entry in 'computedMonotonic' maps
+     * from the new name to the old name.
      */
     void reportComputedPaths(std::set<std::string>* computedPaths,
-                             StringMap<std::string>* renamedPaths) const;
+                             StringMap<std::string>* renamedPaths,
+                             StringMap<std::string>* computedMonotonic) const;
 
     const std::string& getPath() const {
         return _pathToNode;
