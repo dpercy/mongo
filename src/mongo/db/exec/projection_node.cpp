@@ -255,8 +255,9 @@ void ProjectionNode::reportComputedPaths(std::set<std::string>* computedPaths,
             (*renamedPaths)[rename.first] = rename.second;
         }
 
-        for (auto&& cm : exprComputedPaths.computedMonotonic) {
-            (*computedMonotonic)[cm.first] = cm.second;
+        boost::optional<FieldPath> monotonicArg = computedPair.second->getMonotonicArg();
+        if (monotonicArg) {
+            (*computedMonotonic)[exprPath] = monotonicArg->fullPath();
         }
     }
     for (auto&& childPair : _children) {

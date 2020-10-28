@@ -210,7 +210,8 @@ public:
 
         return {DocumentSource::GetModPathsReturn::Type::kAllExcept,
                 std::move(preservedPaths),
-                std::move(renamedPaths)};
+                std::move(renamedPaths),
+                std::move(computedMonotonic)};
     }
 
     /**

@@ -107,9 +107,6 @@ public:
         // Mappings from the new name of a path after applying this expression, to the old one
         // before applying this expression.
         StringMap<std::string> renames;
-
-        // Mapping from new name to old name, for monotonic expressions.
-        StringMap<std::string> computedMonotonic;
     };
 
     virtual ~Expression(){};
@@ -194,6 +191,14 @@ public:
     virtual ComputedPaths getComputedPaths(const std::string& exprFieldPath,
                                            Variables::Id renamingVar = Variables::kRootId) const {
         return {{exprFieldPath}, {}};
+    }
+
+    /**
+     * If this Expression uses one field from the input document, and its result is a monotonic
+     * function of that field, return the dotted field path.
+     */
+    virtual boost::optional<FieldPath> getMonotonicArg() const {
+        return boost::none;
     }
 
     /**
@@ -751,6 +756,10 @@ protected:
 private:
     // The name of this expression, e.g. $week or $month.
     StringData _opName;
+
+protected:
+    // _date and _timeZone are needed by ExpressionYear::getMonotonicArg(), so they
+    // have to be protected instead of private.
 
     // The expression representing the date argument.
     boost::intrusive_ptr<Expression>& _date;
@@ -1439,6 +1448,12 @@ public:
 
     ComputedPaths getComputedPaths(const std::string& exprFieldPath,
                                    Variables::Id renamingVar) const final;
+
+    boost::optional<FieldPath> getMonotonicArg() const {
+        // TODO check if based on CURRENT?
+        // TODO is "$$CURRENT" a path? maybe shouldn't count since doesn't mention a field?
+        return _fieldPath.tail();
+    }
 
     void acceptVisitor(ExpressionVisitor* visitor) final {
         return visitor->visit(this);
@@ -2754,6 +2769,14 @@ public:
 
     void acceptVisitor(ExpressionVisitor* visitor) final {
         return visitor->visit(this);
+    }
+
+    boost::optional<FieldPath> getMonotonicArg() const {
+        // I'm pretty sure it's not monotonic if the time zone can vary.
+        // TODO is it only monotonic in UTC?
+        if (!ExpressionConstant::isNullOrConstant(_timeZone))
+            return boost::none;
+        return _date->getMonotonicArg();
     }
 };
 
