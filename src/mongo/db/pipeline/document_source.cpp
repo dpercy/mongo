@@ -319,8 +319,7 @@ std::set<SortPattern::SortPatternPart> renamePart(
                     // Empty FieldPaths don't exist, so we have two cases: either prefix covers
                     // all of fieldPath, or there is a nonempty suffix we have to append.
                     if (i == fieldPath->getPathLength() - 1) {
-                        // prefix == fieldPath
-                        renamedPaths.push_back(*fieldPath);
+                        renamedPaths.push_back(renamedPrefix);
                     } else {
                         renamedPaths.push_back(renamedPrefix.concat(fieldPath->getSuffix(i + 1)));
                     }
