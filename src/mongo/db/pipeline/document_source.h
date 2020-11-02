@@ -486,6 +486,10 @@ public:
         StringMap<std::string> computedMonotonic;
 
         Value serialize() const;
+
+        // If the input has a field called 'oldName', where can I find its value in the output?
+        // The answer is zero or more new names.
+        std::vector<FieldPath> whatHappenedTo(const FieldPath& oldName) const;
     };
 
     /**
@@ -543,13 +547,18 @@ public:
 
         Value serialize() const;
 
-        // A field can be mapped to more than one new name.
-        // To represent a dropped field, map it to an empty vector.
-        // Since a FieldPath can be dotted, renaming a -> b also has the effect of
-        // renaming a.x -> b.x, etc: a path is renamed if any prefix is renamed.
-        // If a field does not occur in the map, 'keepOther' determines whether it
-        // is preserved or dropped.
-        Sorts rename(const std::map<FieldPath, std::vector<FieldPath>>& oldToNew, bool keepOther) const;
+        /**
+         * A field can be mapped to more than one new name.
+         * To represent a dropped field, map it to an empty vector.
+         *
+         * Caller must ensure the map has an entry for every FieldPath in the Sorts.
+         *
+         * This method does not handle implied renamings based on prefixes:
+         * although in MQL renaming a -> b implies renaming a.x -> b.x, a.x.y -> b.x.y, etc,
+         * this method requires the caller to include a map entry for each complete FieldPath
+         * that should be renamed.
+         */
+        Sorts rename(const std::map<FieldPath, std::vector<FieldPath>>& oldToNew) const;
     };
 
     /**

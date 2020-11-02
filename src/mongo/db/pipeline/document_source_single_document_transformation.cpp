@@ -119,19 +119,46 @@ DocumentSource::GetModPathsReturn DocumentSourceSingleDocumentTransformation::ge
 
 DocumentSource::Sorts DocumentSourceSingleDocumentTransformation::getOutputSorts(
     Pipeline::SourceContainer::iterator begin, Pipeline::SourceContainer::iterator it) const {
+    // Handle a few fast paths first:
+    // 1. If we are the first pipeline stage then there is no previous stage to analyze.
     if (it == begin)
         return {};
 
-    // Stages like $project and $set can both add new sorts, and invalidate existing sorts.
-    // {$set: {x: "$a"}} invalidates any sort involving $x.
-    // It also duplicates any sort involving $a.
+    // 2. If this stage loses all sorting information, don't bother analyzing previous stages.
+    auto mod = getModifiedPaths();
+    if (mod.type !== DocumentSource::GetModPathsReturn::Type::kFiniteSet
+        && mod.type !== cumentSource::GetModPathsReturn::Type::kAllExcept) {
+        return {};
+    }
 
-    // The bindings take effect simultaneously: for example, {$set: {a: "$b", b: "$a"}} swaps a and
-    // b. This means we can't process one binding at a time, and we can't easily split the work
-    // into separate phases. We have to build a map describing the renames and apply it in one step.
+    // Now handle the interesting case: we have a previous stage to analyze, and we know how to
+    // preserve some sorting information from it.
 
+    auto prev = std::prev(it);
+    auto prevSorts = (*prev)->getOutputSorts(begin, prev);
+
+    // Two different things can happen to a field when it passes through a stage like $set:
+    // 1. We can lose all information about it.
+    // 2. We can learn that its value is still available, under one or more new names.
+
+    std::set<FieldPath> interestingPaths;
+    for (auto sort : prevSorts.sorts) {
+        for (auto part : sort) {
+            if (auto fieldPath = part.fieldPath) {
+                interestingPaths.insert(fieldPath);
+            }
+        }
+    }
+
+    // For each field path in interestingPaths, what happened to it?
     std::map<FieldPath, std::vector<FieldPath>> oldToNew;
-    bool keepOther;
+    for (auto oldName : interestingPaths) {
+        // whatHappenedTo() knows how to handle dotted prefixes: if the user renamed a -> b
+        // and we ask whatHappenedTo() about a.b it will say b.b.
+        std::vector<FieldPath> newNames = mod.whatHappenedTo(path);
+        oldToNew[oldName]
+    }
+
 
     auto mod = getModifiedPaths();
     switch (mod.type) {
@@ -182,7 +209,7 @@ DocumentSource::Sorts DocumentSourceSingleDocumentTransformation::getOutputSorts
 
     auto prev = std::prev(it);
     auto prevSorts = (*prev)->getOutputSorts(begin, prev);
-    return prevSorts.rename(oldToNew, keepOther);
+    return prevSorts.rename(oldToNew);
 }
 
 }  // namespace mongo

@@ -149,6 +149,11 @@ public:
 
     FieldPath concat(const FieldPath& tail) const;
 
+    bool isPrefixOf(const FieldPath& other) const {
+        return getPathLength() <= other.getPathLength()
+            && *this == other.getSubpath(this->getPathLength() - 1);
+    }
+
 private:
     FieldPath(std::string string, std::vector<size_t> dots)
         : _fieldPath(std::move(string)), _fieldPathDotPosition(std::move(dots)) {}

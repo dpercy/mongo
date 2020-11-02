@@ -291,75 +291,117 @@ Value DocumentSource::GetModPathsReturn::serialize() const {
 }
 
 namespace {
+// Check if two FieldPaths refer to overlapping portions of a document.
+// For example, "a.b" overlaps with "a.b.c" because modifying "a.b.c" also modifies "a.b".
+// Two FieldPaths overlap if either is a prefix of the other (or if they're equal).
+// "a.b.x" and "a.y" do not overlap, because they diverge after "a.".
+bool overlaps(const FieldPath& x, const FieldPath& y) {
+    size_t numElements = std::min(x.getPathLength(), y.getPathLength());
+    return x.getSubpath(numElements) == y.getSubpath(numElements);
+}
+}
 
-std::set<SortPattern::SortPatternPart> renamePart(
-    const SortPattern::SortPatternPart& part,
-    const std::map<FieldPath, std::vector<FieldPath>>& oldToNew,
-    bool keepOther) {
-    std::set<SortPattern::SortPatternPart> result;
+std::vector<FieldPath> DocumentSource::GetModPathsReturn::whatHappenedTo(
+    const FieldPath& oldName) const {
 
-    // TODO for now, assume expression sorts are never preserved.
-    if (auto fieldPath = part.fieldPath) {
-        invariant(!part.expression);
+    std::vector<FieldPath> newNames;
 
-        // Consider each prefix of the fieldPath:
-        // if it has a map entry then generate zero or more renamed fieldPaths;
-        // if it has no map entry then use 'keepOther' to decide whether to drop or keep it.
-        for (size_t i = 0; i < fieldPath->getPathLength(); ++i) {
-            // 'i' is the index of the last component of the prefix.
-            FieldPath prefix = fieldPath->getSubpath(i);
+    // In general, oldName can be a dotted path like "a.b.c".
+    // We need to look at 'renames', and all prefixes of oldName, to find the new names.
+    // Also, we need to decide whether "a.b.c" is implicitly preserved (as in a $set stage),
+    // and whether it's explicitly preserved (as in an inclusion projection).
 
-            // Lookup prefix in the map.
-            std::vector<FieldPath> renamedPaths;
-            auto iter = oldToNew.find(prefix);
-            if (iter == oldToNew.end()) {
-                // No explicit map entry:
-                // if keepOther then pretend we had an entry mapping it to itself;
-                // otherwise pretend we had an entry mapping it to zero new names.
-                if (keepOther)
-                    renamedPaths.push_back(*fieldPath);
-            } else {
-                for (auto renamedPrefix : iter->second) {
-                    // Empty FieldPaths don't exist, so we have two cases: either prefix covers
-                    // all of fieldPath, or there is a nonempty suffix we have to append.
-                    if (i == fieldPath->getPathLength() - 1) {
-                        renamedPaths.push_back(renamedPrefix);
-                    } else {
-                        renamedPaths.push_back(renamedPrefix.concat(fieldPath->getSuffix(i + 1)));
-                    }
-                }
+    if (type == Type::kFiniteSet) {
+        // kFiniteSet can implicitly preserve names.
+        // oldName is preserved if nothing in 'paths' or 'renames' overwrites it.
+        bool preserved = true;
+        for (auto overwritten : paths) {
+            if (overlaps(oldName, overwritten)) {
+                preserved = false;
+                break;
             }
-
-            // Generate zero or more renamed Parts into result.
-            for (auto renamedPath : renamedPaths) {
-                result.insert({part.isAscending, renamedPath, nullptr});
+        }
+        for (auto [overwritten, from] : renames) {
+            if (overlaps(oldName, overwritten)) {
+                preserved = false;
+                break;
+            }
+        }
+        if (preserved) {
+            newNames.push_back(oldName);
+        }
+    }
+    if (type == Type::kAllExcept) {
+        // kAllExcept can explicitly preserve names.
+        // Each item in 'paths' is an explicitly preserved name.
+        // oldName is preserved if any prefix of it is in 'paths'.
+        size_t len = oldName.getPathLength();
+        // i is the index of the last element of the prefix.
+        for (size_t i = 0; i < len; ++i) {
+            StringData prefix = oldName.getSubpath(i);
+            if (paths.find(prefix) != paths.end()) {
+                newNames.push_back(oldName);
+                break;
             }
         }
     }
 
-    return result;
+    if (type == Type::kAllExcept || type == Type::kFiniteSet) {
+        // In both of these cases, 'renames' may have replaced some prefix of oldName.
+        // If oldName is 'a.b.c' and renames has { x: a.b } then a.b.c is now named x.c.
+
+        // We have to be careful here though: a rename like { x.y: a } does not mean that
+        // 'a' is now named 'x.y'. A dotted path can refer to many locations in the document,
+        // and assigning to a dotted path broadcasts the assignment to every location; this means
+        // for example {$set: {x.y: $a}}, {$set: {a: $x.y}} can change the value of 'a'.
+
+        // So, for each entry in 'renames', if the target is not dotted and the source is a prefix
+        // of oldName, then we learn that oldName is renamed.
+        for (auto [to, from] : renames) {
+            FieldPath target{to};
+            // TODO I've seen this '2' elsewhere, but why isn't it '1'?
+            ///if (target.getPathLength != 2)
+            ///    continue;
+            FieldPath source{from};
+            if (source.isPrefixOf(oldName)) {
+                auto newName = source.concat(oldName.getSuffix(source.getPathLength()));
+                newNames.push_back(newName);
+            }
+        }
+    }
+
+    // TODO this method is where we should handle computedMonotonic--change the return type too
+
+    return newNames;
 }
 
+namespace {
+
 // Find all renamings of 'original' that start with 'prefix', and insert them into 'result'.
-// 'oldToNew' and 'keepOther' describe which paths are renamed
+// 'oldToNew' describes which paths are renamed.
 // To avoid the overhead of passing an extended copy of 'prefix' to each recursive call,
 // this function is allowed to modify 'prefix' in place, but it must undo its modifications
 // before returning.
+// Conceptually, each recursive call looks at a smaller and smaller suffix of 'original',
+// but physically it uses the prefix length as an index into 'original'.
 void renameInto(
     std::vector<SortPattern::SortPatternPart>& prefix,
     const SortPattern& original,
     const std::map<FieldPath, std::vector<FieldPath>>& oldToNew,
-    bool keepOther,
     DocumentSource::Sorts& result) {
     size_t i = prefix.size();
     if (i == original.size()) {
-        // All parts have been renamed.
+        // All SortPatternParts have been renamed.
         result.sorts.emplace(prefix);
     } else {
-        // Consider all renamings of the first part.
-        for (auto part : renamePart(original.begin()[i], oldToNew, keepOther)) {
-            prefix.push_back(part);
-            renameInto(prefix, original, oldToNew, keepOther, result);
+        // Caller must ensure every FieldPath has an explicit map entry.
+        auto part = original.begin()[i];
+        auto it = oldToNew.find(part);
+        invariant(it != oldToNew.end());
+        // Consider all renamings of the first SortPatternPart.
+        for (auto renamedPart : it->second) {
+            prefix.push_back(renamedPart);
+            renameInto(prefix, original, oldToNew, result);
             prefix.pop_back();
 
             invariant(prefix.size() == i);
@@ -370,15 +412,14 @@ void renameInto(
 }  // namespace
 
 DocumentSource::Sorts DocumentSource::Sorts::rename(
-    const std::map<FieldPath, std::vector<FieldPath>>& oldToNew,
-    bool keepOther) const {
+    const std::map<FieldPath, std::vector<FieldPath>>& oldToNew) const {
     Sorts result;
     for (auto s : sorts) {
         // If s is {a, b, c}, and we rename b -> [x] and c -> [y, z],
         // we need to generate {a, x, y} and {a, x, z}.
         // Each sort is a tuple, so the renamed sort is a cross product of the renamed components.
         std::vector<SortPattern::SortPatternPart> prefix;
-        renameInto(prefix, s, oldToNew, keepOther, result);
+        renameInto(prefix, s, oldToNew, result);
     }
     return result;
 }
