@@ -82,22 +82,14 @@ class Document;
  * REGISTER_DOCUMENT_SOURCE(foo,
  *                          LiteParsedDocumentSourceDefault::parse,
  *                          DocumentSourceFoo::createFromBson);
- *
- * If your stage is actually an alias which needs to return more than one stage (such as
- * $sortByCount), you should use the REGISTER_MULTI_STAGE_ALIAS macro instead.
  */
 #define REGISTER_DOCUMENT_SOURCE_CONDITIONALLY(key, liteParser, fullParser, minVersion, ...) \
     MONGO_INITIALIZER(addToDocSourceParserMap_##key)(InitializerContext*) {                  \
         if (!__VA_ARGS__) {                                                                  \
             return;                                                                          \
         }                                                                                    \
-        auto fullParserWrapper = [](BSONElement stageSpec,                                   \
-                                    const boost::intrusive_ptr<ExpressionContext>& expCtx) { \
-            return std::list<boost::intrusive_ptr<DocumentSource>>{                          \
-                (fullParser)(stageSpec, expCtx)};                                            \
-        };                                                                                   \
         LiteParsedDocumentSource::registerParser("$" #key, liteParser);                      \
-        DocumentSource::registerParser("$" #key, fullParserWrapper, minVersion);             \
+        DocumentSource::registerParser("$" #key, fullParser, minVersion);                    \
     }
 
 #define REGISTER_DOCUMENT_SOURCE(key, liteParser, fullParser) \
@@ -110,28 +102,14 @@ class Document;
 #define REGISTER_DOCUMENT_SOURCE_WITH_MIN_VERSION(key, liteParser, fullParser, minVersion) \
     REGISTER_DOCUMENT_SOURCE_CONDITIONALLY(key, liteParser, fullParser, minVersion, true)
 
-/**
- * Registers a multi-stage alias (such as $sortByCount) to have the single name 'key'. When a stage
- * with name '$key' is found, 'liteParser' will be used to produce a LiteParsedDocumentSource,
- * while 'fullParser' will be called to construct a vector of DocumentSources. See the comments on
- * REGISTER_DOCUMENT_SOURCE for more information.
- *
- * As an example, if your stage alias looks like {$foo: <args>} and does *not* require any special
- * pre-parse checks, you should implement a static parser like DocumentSourceFoo::createFromBson(),
- * and register it like so:
- * REGISTER_MULTI_STAGE_ALIAS(foo,
- *                            LiteParsedDocumentSourceDefault::parse,
- *                            DocumentSourceFoo::createFromBson);
- */
-#define REGISTER_MULTI_STAGE_ALIAS(key, liteParser, fullParser)                  \
-    MONGO_INITIALIZER(addAliasToDocSourceParserMap_##key)(InitializerContext*) { \
-        LiteParsedDocumentSource::registerParser("$" #key, (liteParser));        \
-        DocumentSource::registerParser("$" #key, (fullParser), boost::none);     \
-    }
-
 class DocumentSource : public RefCountable {
 public:
+    // In general a parser returns a list of DocumentSources, to accomodate "multi-stage aliases"
+    // like $bucket.
     using Parser = std::function<std::list<boost::intrusive_ptr<DocumentSource>>(
+        BSONElement, const boost::intrusive_ptr<ExpressionContext>&)>;
+    // But in the common case a parser returns only one DocumentSource.
+    using SimpleParser = std::function<boost::intrusive_ptr<DocumentSource>(
         BSONElement, const boost::intrusive_ptr<ExpressionContext>&)>;
 
     using ChangeStreamRequirement = StageConstraints::ChangeStreamRequirement;
@@ -366,6 +344,17 @@ public:
     static void registerParser(
         std::string name,
         Parser parser,
+        boost::optional<ServerGlobalParams::FeatureCompatibility::Version> requiredMinVersion);
+    /**
+     * Convenience wrapper for the common case, when DocumentSource::Parser returns a list of one
+     * DocumentSource.
+     *
+     * DO NOT call this method directly. Instead, use the REGISTER_DOCUMENT_SOURCE macro defined in
+     * this file.
+     */
+    static void registerParser(
+        std::string name,
+        SimpleParser simpleParser,
         boost::optional<ServerGlobalParams::FeatureCompatibility::Version> requiredMinVersion);
 
     /**

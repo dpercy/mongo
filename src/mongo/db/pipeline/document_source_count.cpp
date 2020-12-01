@@ -43,7 +43,7 @@ using boost::intrusive_ptr;
 using std::list;
 using std::string;
 
-REGISTER_MULTI_STAGE_ALIAS(count,
+REGISTER_DOCUMENT_SOURCE(count,
                            LiteParsedDocumentSourceDefault::parse,
                            DocumentSourceCount::createFromBson);
 

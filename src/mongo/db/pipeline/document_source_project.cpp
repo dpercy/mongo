@@ -100,6 +100,24 @@ intrusive_ptr<DocumentSource> DocumentSourceProject::create(
     return project;
 }
 
+boost::intrusive_ptr<DocumentSource> DocumentSourceProject::createUnset(
+    const FieldPath& fieldPath,
+    const boost::intrusive_ptr<ExpressionContext>& expCtx) {
+
+    // This helper is only meant for removing top-level fields. Dotted field paths require
+    // thinking about implicit array traversal.
+    tassert(0,
+            str::stream() << "Expected a top-level field name, but got " << fieldPath.fullPath(),
+            fieldPath.getPathLength() == 1);
+
+    auto unsetSpecBson = BSON("$unset" << fieldPath.fullPath());
+    auto unsetSpec = std::vector<BSONElement>{1, unsetSpecBson.firstElement()};
+    return create(
+        buildExclusionProjectionSpecification(unsetSpec),
+        expCtx,
+        kAliasNameUnset);
+}
+
 intrusive_ptr<DocumentSource> DocumentSourceProject::createFromBson(
     BSONElement elem, const intrusive_ptr<ExpressionContext>& expCtx) {
     if (elem.fieldNameStringData() == kStageName) {

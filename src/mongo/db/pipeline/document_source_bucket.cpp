@@ -40,7 +40,7 @@ using boost::intrusive_ptr;
 using std::list;
 using std::vector;
 
-REGISTER_MULTI_STAGE_ALIAS(bucket,
+REGISTER_DOCUMENT_SOURCE(bucket,
                            LiteParsedDocumentSourceDefault::parse,
                            DocumentSourceBucket::createFromBson);
 
