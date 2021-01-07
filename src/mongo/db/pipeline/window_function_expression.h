@@ -139,7 +139,7 @@ struct WindowBounds {
      *
      *     documents: ['unbounded', 'unbounded']
      */
-    static WindowBounds parse(BSONObj args);
+    static WindowBounds parse(BSONObj args, ExpressionContext* expCtx);
 
     void serialize(MutableDocument& args) const;
 };

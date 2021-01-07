@@ -47,36 +47,33 @@ namespace mongo {
 StringMap<WindowFunctionExpression::Parser> WindowFunctionExpression::parserMap;
 
 
-WindowBounds WindowBounds::parse(BSONObj args) {
-    auto documents = args["documents"];
-    auto range = args["range"];
-    auto unit = args["unit"];
-
-    uassert(0,
-            "Window bounds can specify either 'documents' or 'range', not both.",
-            !(documents && range));
-    if (!range) {
-        uassert(0,
-                "Window bounds can only specify 'unit' with range-based bounds.",
-                !unit);
-    }
-
-    if (documents) {
-        uassert(0,
-                "Window bounds must be a 2-element array.",
-                documents.type() == BSONType::Array
-                && documents.Obj().nFields() == 2);
-        // TODO parse either: "unbounded", "current", or ExpressionConstant int.
-        int lower = documents.Obj()[0].safeNumberLong();
-        int upper = documents.Obj()[1].safeNumberLong();
-        return WindowBounds{DocumentBased{lower, upper}};
-    } else if (range) {
-        uasserted(0, "TODO handle range-based bounds");
+namespace {
+template<class T>
+WindowBounds::Bound<T> parseBound(
+        ExpressionContext* expCtx,
+        BSONElement elem,
+        std::function<T(Value)> handleExpression) {
+    if (elem.type() == BSONType::String) {
+        auto s = elem.str();
+        if (s == "unbounded") {
+            return WindowBounds::Unbounded{};
+        } else if (s == "current") {
+            return WindowBounds::Current{};
+        } else {
+            uasserted(ErrorCodes::FailedToParse,
+                      "Window bounds must be 'unbounded', 'current', or a number.");
+        }
     } else {
-        return WindowBounds{DocumentBased{Unbounded{}, Unbounded{}}};
+        // Expect a constant number expression.
+        auto expr = Expression::parseOperand(expCtx, elem, expCtx->variablesParseState);
+        expr = expr->optimize();
+        auto constant = dynamic_cast<ExpressionConstant*>(expr.get());
+        uassert(ErrorCodes::FailedToParse,
+                "Window bounds expression must be a constant.",
+                constant);
+        return handleExpression(constant->getValue());
     }
 }
-namespace {
 template<class T>
 Value serializeBound(const WindowBounds::Bound<T>& b) {
     return stdx::visit(
@@ -87,6 +84,41 @@ Value serializeBound(const WindowBounds::Bound<T>& b) {
         },
         b);
 }
+}
+
+WindowBounds WindowBounds::parse(BSONObj args, ExpressionContext* expCtx) {
+    auto documents = args["documents"];
+    auto range = args["range"];
+    auto unit = args["unit"];
+
+    uassert(ErrorCodes::FailedToParse,
+            "Window bounds can specify either 'documents' or 'range', not both.",
+            !(documents && range));
+    if (!range) {
+        uassert(ErrorCodes::FailedToParse,
+                "Window bounds can only specify 'unit' with range-based bounds.",
+                !unit);
+    }
+
+    if (documents) {
+        uassert(ErrorCodes::FailedToParse,
+                "Window bounds must be a 2-element array.",
+                documents.type() == BSONType::Array
+                && documents.Obj().nFields() == 2);
+        auto parseInt = [](Value v) -> int {
+            uassert(ErrorCodes::FailedToParse,
+                    "Numeric document-based bounds must be an integer",
+                    v.integral());
+            return v.coerceToInt();
+        };
+        Bound<int> lower = parseBound<int>(expCtx, documents.Obj()[0], parseInt);
+        Bound<int> upper = parseBound<int>(expCtx, documents.Obj()[1], parseInt);
+        return WindowBounds{DocumentBased{lower, upper}};
+    } else if (range) {
+        uasserted(0, "TODO handle range-based bounds");
+    } else {
+        return WindowBounds{DocumentBased{Unbounded{}, Unbounded{}}};
+    }
 }
 void WindowBounds::serialize(MutableDocument& args) const {
     stdx::visit(
@@ -107,10 +139,10 @@ void WindowBounds::serialize(MutableDocument& args) const {
 intrusive_ptr<WindowFunctionExpression> WindowFunctionExpression::parse(
     BSONElement elem, optional<BSONObj> sortBy, ExpressionContext* expCtx) {
     auto parser = parserMap.find(elem.fieldName());
-    uassert(0,
+    uassert(ErrorCodes::FailedToParse,
             str::stream() << "No such window function: " << elem.fieldName(),
             parser != parserMap.end());
-    uassert(0,
+    uassert(ErrorCodes::FailedToParse,
             str::stream()
                 << "Window function "
                 << elem.fieldName()
@@ -134,7 +166,7 @@ public:
             expCtx,
             elem.Obj()["input"],
             expCtx->variablesParseState);
-        auto bounds = WindowBounds::parse(elem.Obj());
+        auto bounds = WindowBounds::parse(elem.Obj(), expCtx);
         return make_intrusive<WFEAccumulator>(
             std::move(accumulatorName),
             std::move(input),
