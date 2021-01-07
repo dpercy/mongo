@@ -100,24 +100,40 @@ WindowBounds WindowBounds::parse(BSONObj args, ExpressionContext* expCtx) {
                 !unit);
     }
 
-    if (documents) {
+    if (!range && !documents) {
+        return WindowBounds{DocumentBased{Unbounded{}, Unbounded{}}};
+    }
+
+    auto unpack = [](BSONElement e) -> std::pair<BSONElement, BSONElement> {
         uassert(ErrorCodes::FailedToParse,
                 "Window bounds must be a 2-element array.",
-                documents.type() == BSONType::Array
-                && documents.Obj().nFields() == 2);
+                e.type() == BSONType::Array && e.Obj().nFields() == 2);
+        return {e.Obj()[0], e.Obj()[1]};
+    };
+    if (documents) {
+        auto [lower, upper] = unpack(documents);
+
         auto parseInt = [](Value v) -> int {
             uassert(ErrorCodes::FailedToParse,
                     "Numeric document-based bounds must be an integer",
                     v.integral());
             return v.coerceToInt();
         };
-        Bound<int> lower = parseBound<int>(expCtx, documents.Obj()[0], parseInt);
-        Bound<int> upper = parseBound<int>(expCtx, documents.Obj()[1], parseInt);
-        return WindowBounds{DocumentBased{lower, upper}};
-    } else if (range) {
-        uasserted(0, "TODO handle range-based bounds");
+        return WindowBounds{DocumentBased{
+            parseBound<int>(expCtx, lower, parseInt),
+            parseBound<int>(expCtx, upper, parseInt),
+        }};
     } else {
-        return WindowBounds{DocumentBased{Unbounded{}, Unbounded{}}};
+        auto [lower, upper] = unpack(range);
+        uassert(0,
+                "TODO time-based bounds",
+                !unit);
+
+        auto identity = [](Value v) -> Value { return v; };
+        return WindowBounds{RangeBased{
+            parseBound<Value>(expCtx, lower, identity),
+            parseBound<Value>(expCtx, upper, identity),
+        }};
     }
 }
 void WindowBounds::serialize(MutableDocument& args) const {
@@ -126,10 +142,15 @@ void WindowBounds::serialize(MutableDocument& args) const {
             [&](const DocumentBased& docBounds) {
                 args["documents"] = Value{std::vector<Value>{
                     serializeBound(docBounds.lower),
-                    serializeBound(docBounds.upper)}};
+                    serializeBound(docBounds.upper),
+                }};
             },
             [&](const RangeBased& rangeBounds) {
-                invariant(0 && "TODO range-based bounds");
+                args["range"] = Value{std::vector<Value>{
+                    serializeBound(rangeBounds.lower),
+                    serializeBound(rangeBounds.upper),
+                }};
+                // TODO args["unit"]
             },
         },
         bounds);

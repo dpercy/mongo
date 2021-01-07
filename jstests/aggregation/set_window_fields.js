@@ -20,6 +20,15 @@ example({output: {v: {$sum: { input: "$a", documents: [-3, 'unbounded'], }}}});
 example({output: {v: {$sum: { input: "$a", documents: ['unbounded', +5], }}}});
 
 
+// Range-based bounds:
+example({output: {v: {$sum: { input: "$a", range: ['unbounded', 'unbounded'], }}}});
+example({output: {v: {$sum: { input: "$a", range: [-2, +4], }}}});
+example({output: {v: {$sum: { input: "$a", range: [-3, 'unbounded'], }}}});
+example({output: {v: {$sum: { input: "$a", range: ['unbounded', +5], }}}});
+example({output: {v: {$sum: { input: "$a", range: [NumberDecimal('1.01'), NumberLong(5)]}}}});
+
+
+
 // $rank doesn't take an input.
 // But it requires a sortBy.
 example({ sortBy: {x: 1, y: -1}, output: {v: {$rank: {}}}, });
