@@ -496,7 +496,12 @@ private:
  * TimeUnit. Throws an exception with error code ErrorCodes::FailedToParse when passed an invalid
  * name.
  */
-TimeUnit parseTimeUnit(const std::string& unitName);
+TimeUnit parseTimeUnit(StringData unitName);
+
+/**
+ * Inverse of parseTimeUnit.
+ */
+StringData serializeTimeUnit(TimeUnit unit);
 
 /**
  * A custom-deleter which destructs a timelib_rel_time* when it goes out of scope.

@@ -27,6 +27,9 @@ example({output: {v: {$sum: { input: "$a", range: [-3, 'unbounded'], }}}});
 example({output: {v: {$sum: { input: "$a", range: ['unbounded', +5], }}}});
 example({output: {v: {$sum: { input: "$a", range: [NumberDecimal('1.01'), NumberLong(5)]}}}});
 
+// Time-based bounds:
+example({output: {v: {$sum: { input: "$a", range: [-3, 'unbounded'], unit: 'hour' }}}});
+
 
 
 // $rank doesn't take an input.
@@ -41,4 +44,4 @@ example({ sortBy: {x: 1, y: -1}, output: {v: {$rank: {}}}, });
 // - If the time axis is datetime, you must specify which time unit
 //   you'd like the output expressed in.
 example({ sortBy: {ts: 1}, output: {v: {$derivative: {input: "$a"}}}, });
-example({ sortBy: {ts: 1}, output: {v: {$derivative: {input: "$a", unit: 'seconds'}}}, });
+example({ sortBy: {ts: 1}, output: {v: {$derivative: {input: "$a", unit: 'second'}}}, });

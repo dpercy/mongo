@@ -709,7 +709,7 @@ long long dateDiff(Date_t startDate, Date_t endDate, TimeUnit unit, const TimeZo
     }
 }
 
-TimeUnit parseTimeUnit(const std::string& unitName) {
+TimeUnit parseTimeUnit(StringData unitName) {
     static const StringMap<TimeUnit> timeUnitNameToTimeUnitMap{
         {"year", TimeUnit::year},
         {"quarter", TimeUnit::quarter},
@@ -726,6 +726,21 @@ TimeUnit parseTimeUnit(const std::string& unitName) {
             str::stream() << "unknown time unit value: " << unitName,
             iterator != timeUnitNameToTimeUnitMap.end());
     return iterator->second;
+}
+
+StringData serializeTimeUnit(TimeUnit unit) {
+    switch (unit) {
+        case TimeUnit::year: return "year"_sd;
+        case TimeUnit::quarter: return "quarter"_sd;
+        case TimeUnit::month: return "month"_sd;
+        case TimeUnit::week: return "week"_sd;
+        case TimeUnit::day: return "day"_sd;
+        case TimeUnit::hour: return "hour"_sd;
+        case TimeUnit::minute: return "minute"_sd;
+        case TimeUnit::second: return "second"_sd;
+        case TimeUnit::millisecond: return "millisecond"_sd;
+    }
+    MONGO_UNREACHABLE;
 }
 
 void TimelibRelTimeDeleter::operator()(timelib_rel_time* relTime) {
@@ -894,5 +909,4 @@ Date_t dateAdd(Date_t date, TimeUnit unit, long long amount, const TimeZone& tim
     timelib_time_dtor(newTime);
     return returnDate;
 }
-
 }  // namespace mongo

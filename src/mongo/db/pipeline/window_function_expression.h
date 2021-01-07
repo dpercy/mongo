@@ -114,13 +114,11 @@ struct WindowBounds {
         Bound<int> upper;
     };
     struct RangeBased {
-        // TODO Include unit here? or separate case for TimeBased?
-        // enum Unit { seconds, minutes }; // share? with $dateTrunc?
-
         // Range-based bounds can be any numeric type: int, double, Decimal, etc.
-        Bound<Value> lower;  // float? Value?
+        Bound<Value> lower;
         Bound<Value> upper;
-        // boost::optional<Unit> unit;
+
+        boost::optional<TimeUnit> unit;
     };
 
     stdx::variant<DocumentBased, RangeBased> bounds;

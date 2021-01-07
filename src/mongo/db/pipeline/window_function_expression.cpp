@@ -125,14 +125,20 @@ WindowBounds WindowBounds::parse(BSONObj args, ExpressionContext* expCtx) {
         }};
     } else {
         auto [lower, upper] = unpack(range);
-        uassert(0,
-                "TODO time-based bounds",
-                !unit);
+
+        optional<TimeUnit> parsedUnit;
+        if (unit) {
+            uassert(ErrorCodes::FailedToParse,
+                    "'unit' must be a string",
+                    unit.type() == BSONType::String);
+            parsedUnit = parseTimeUnit(unit.str());
+        }
 
         auto identity = [](Value v) -> Value { return v; };
         return WindowBounds{RangeBased{
             parseBound<Value>(expCtx, lower, identity),
             parseBound<Value>(expCtx, upper, identity),
+            parsedUnit,
         }};
     }
 }
@@ -150,7 +156,9 @@ void WindowBounds::serialize(MutableDocument& args) const {
                     serializeBound(rangeBounds.lower),
                     serializeBound(rangeBounds.upper),
                 }};
-                // TODO args["unit"]
+                if (rangeBounds.unit) {
+                    args["unit"] = Value{serializeTimeUnit(*rangeBounds.unit)};
+                }
             },
         },
         bounds);
