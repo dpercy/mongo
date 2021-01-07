@@ -74,18 +74,43 @@ list<intrusive_ptr<DocumentSource>> document_source_set_window_fields::createFro
         else
             return boost::none;
     }();
+
+    auto sortBy = spec.getSortBy();
+
+    std::vector<WindowFunctionStatement> outputFields;
+    for (auto&& elem : spec.getOutput()) {
+        outputFields.push_back(WindowFunctionStatement::parse(elem, sortBy, expCtx.get()));
+    }
+
     return create(
         std::move(expCtx),
         std::move(partitionBy),
-        std::move(spec.getSortBy()),
-        std::move(spec.getOutput()));
+        std::move(sortBy),
+        std::move(outputFields));
+}
+
+WindowFunctionStatement WindowFunctionStatement::parse(
+        BSONElement elem, boost::optional<BSONObj> sortBy, ExpressionContext* expCtx) {
+    // 'elem' is a statement like 'v: {$sum: {...}}', whereas the expression is '$sum: {...}'.
+    uassert(ErrorCodes::FailedToParse,
+            str::stream()
+                << "The field '" << elem.fieldName()
+                << "' must be a window-function object",
+            elem.type() == BSONType::Object && elem.Obj().nFields() == 1);
+    return WindowFunctionStatement(
+        elem.fieldName(),
+        WindowFunctionExpression::parse(elem.Obj().firstElement(), sortBy, expCtx));
+}
+void WindowFunctionStatement::serialize(
+        MutableDocument& outputFields, boost::optional<ExplainOptions::Verbosity> explain) const {
+    outputFields[fieldName] = expr->serialize(explain);
 }
 
 list<intrusive_ptr<DocumentSource>> document_source_set_window_fields::create(
     const intrusive_ptr<ExpressionContext>& expCtx,
     optional<intrusive_ptr<Expression>> partitionBy,
     optional<BSONObj> sortBy,
-    BSONObj fields) {
+    std::vector<WindowFunctionStatement> outputFields) {
 
     // Starting with an input like this:
     //     {$setWindowFields: {partitionBy: {$foo: "$x"}, sortBy: {y: 1}, fields: {...}}}
@@ -164,7 +189,7 @@ list<intrusive_ptr<DocumentSource>> document_source_set_window_fields::create(
 
     // $_internalSetWindowFields
     result.push_back(make_intrusive<DocumentSourceInternalSetWindowFields>(
-        expCtx, simplePartitionByExpr, sortBy, fields));
+        expCtx, simplePartitionByExpr, sortBy, outputFields));
 
     // $unset
     if (complexPartitionBy) {
@@ -180,7 +205,13 @@ Value DocumentSourceInternalSetWindowFields::serialize(
     spec[SetWindowFieldsSpec::kPartitionByFieldName] =
         _partitionBy ? (*_partitionBy)->serialize(false) : Value();
     spec[SetWindowFieldsSpec::kSortByFieldName] = _sortBy ? Value(*_sortBy) : Value();
-    spec[SetWindowFieldsSpec::kOutputFieldName] = Value(_fields);
+
+    MutableDocument output;
+    for (auto&& stmt : _outputFields) {
+        stmt.serialize(output, explain);
+    }
+    spec[SetWindowFieldsSpec::kOutputFieldName] = output.freezeToValue();
+
     return Value(DOC(kStageName << spec.freeze()));
 }
 
@@ -201,8 +232,24 @@ boost::intrusive_ptr<DocumentSource> DocumentSourceInternalSetWindowFields::crea
         else
             return boost::none;
     }();
+<<<<<<< HEAD
     return make_intrusive<DocumentSourceInternalSetWindowFields>(
         expCtx, partitionBy, spec.getSortBy(), spec.getOutput());
+||||||| merged common ancestors
+    return make_intrusive<DocumentSourceSetWindowFieldsAssumeSorted>(
+        expCtx, partitionBy, spec.getSortBy(), spec.getOutput());
+=======
+
+    auto sortBy = spec.getSortBy();
+
+    std::vector<WindowFunctionStatement> outputFields;
+    for (auto&& elem : spec.getOutput()) {
+        outputFields.push_back(WindowFunctionStatement::parse(elem, sortBy, expCtx.get()));
+    }
+
+    return make_intrusive<DocumentSourceSetWindowFieldsAssumeSorted>(
+        expCtx, partitionBy, sortBy, outputFields);
+>>>>>>> some parsing
 }
 
 

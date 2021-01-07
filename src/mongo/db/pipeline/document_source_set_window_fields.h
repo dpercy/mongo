@@ -31,8 +31,30 @@
 
 #include "mongo/db/pipeline/document_source.h"
 #include "mongo/db/pipeline/document_source_set_window_fields_gen.h"
+#include "mongo/db/pipeline/window_function_expression.h"
 
 namespace mongo {
+
+struct WindowFunctionStatement {
+    std::string fieldName; // top-level fieldname, not a path
+    boost::intrusive_ptr<WindowFunctionExpression> expr;
+
+    WindowFunctionStatement(
+        std::string fieldName,
+        boost::intrusive_ptr<WindowFunctionExpression> expr)
+    : fieldName(std::move(fieldName)),
+      expr(std::move(expr)) {}
+
+    static WindowFunctionStatement parse(
+        BSONElement elem,
+        boost::optional<BSONObj> sortBy,
+        ExpressionContext* expCtx);
+    void serialize(
+        MutableDocument& outputFields,
+        boost::optional<ExplainOptions::Verbosity> explain) const;
+};
+
+
 
 /**
  * $setWindowFields is an alias: it desugars to some combination of projection, sorting,
@@ -48,7 +70,7 @@ std::list<boost::intrusive_ptr<DocumentSource>> create(
     const boost::intrusive_ptr<ExpressionContext>& expCtx,
     boost::optional<boost::intrusive_ptr<Expression>> partitionBy,
     boost::optional<BSONObj> sortBy,
-    BSONObj fields);
+    std::vector<WindowFunctionStatement> outputFields);
 }  // namespace document_source_set_window_fields
 
 class DocumentSourceInternalSetWindowFields final : public DocumentSource {
@@ -67,11 +89,11 @@ public:
         const boost::intrusive_ptr<ExpressionContext>& expCtx,
         boost::optional<boost::intrusive_ptr<Expression>> partitionBy,
         boost::optional<BSONObj> sortBy,
-        BSONObj fields)
+        std::vector<WindowFunctionStatement> outputFields)
         : DocumentSource(kStageName, expCtx),
           _partitionBy(partitionBy),
           _sortBy(std::move(sortBy)),
-          _fields(std::move(fields)) {}
+          _outputFields(std::move(outputFields)) {}
 
     StageConstraints constraints(Pipeline::SplitState pipeState) const final {
         return StageConstraints(StreamType::kBlocking,
@@ -102,7 +124,7 @@ private:
 
     boost::optional<boost::intrusive_ptr<Expression>> _partitionBy;
     boost::optional<BSONObj> _sortBy;
-    BSONObj _fields;
+    std::vector<WindowFunctionStatement> _outputFields;
 };
 
 }  // namespace mongo

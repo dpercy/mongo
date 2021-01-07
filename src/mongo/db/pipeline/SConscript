@@ -259,6 +259,7 @@ pipelineEnv.Library(
         'sequential_document_cache.cpp',
         'skip_and_limit.cpp',
         'tee_buffer.cpp',
+        'window_function_expression.cpp',
     ],
     LIBDEPS=[
         '$BUILD_DIR/mongo/client/clientdriver_minimal',
