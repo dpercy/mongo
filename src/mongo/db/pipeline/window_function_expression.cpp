@@ -29,6 +29,7 @@
 
 #include "mongo/platform/basic.h"
 
+#include "mongo/db/pipeline/accumulation_statement.h"
 #include "mongo/db/pipeline/document_source_add_fields.h"
 #include "mongo/db/pipeline/document_source_project.h"
 #include "mongo/db/pipeline/document_source_set_window_fields.h"
@@ -225,9 +226,10 @@ private:
     intrusive_ptr<Expression> input;
     WindowBounds bounds;
 };
-MONGO_INITIALIZER(wfe_parserMap_accumulator)(InitializerContext*) {
-    WindowFunctionExpression::registerParser("$sum", WFEAccumulator::parse);
-    WindowFunctionExpression::registerParser("$max", WFEAccumulator::parse);
+MONGO_INITIALIZER_GENERAL(wfe_parserMap_accumulator, ("accumulatorParserMap"), ())(InitializerContext*) {
+    for (auto name : AccumulationStatement::getRegisteredAccumulators()) {
+        WindowFunctionExpression::registerParser(name, WFEAccumulator::parse);
+    }
 
     return Status::OK();
 }

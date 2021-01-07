@@ -63,6 +63,13 @@ void AccumulationStatement::registerAccumulator(
             it == parserMap.end());
     parserMap[name] = {parser, requiredMinVersion};
 }
+std::vector<std::string> AccumulationStatement::getRegisteredAccumulators() {
+    std::vector<std::string> result;
+    for (auto&& [name, parser] : parserMap) {
+        result.push_back(name);
+    }
+    return result;
+}
 
 AccumulationStatement::Parser& AccumulationStatement::getParser(
     StringData name,
@@ -119,6 +126,12 @@ AccumulationStatement AccumulationStatement::parseAccumulationStatement(
 
     return AccumulationStatement(fieldName.toString(),
                                  AccumulationExpression(initializer, argument, factory));
+}
+
+MONGO_INITIALIZER(accumulatorParserMap)(InitializerContext*) {
+    // Nothing to do. This initializer exists to tie together all the individual initializers
+    // defined by REGISTER_ACCUMULATOR / REGISTER_ACCUMULATOR_WITH_MIN_VERSION.
+    return Status::OK();
 }
 
 }  // namespace mongo

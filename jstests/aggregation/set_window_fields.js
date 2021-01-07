@@ -31,6 +31,18 @@ example({output: {v: {$sum: { input: "$a", range: [NumberDecimal('1.01'), Number
 example({output: {v: {$sum: { input: "$a", range: [-3, 'unbounded'], unit: 'hour' }}}});
 
 
+// Variety of accumulators:
+example({output: {v: {$sum: {input: "$a"}}}});
+example({output: {v: {$max: {input: "$a"}}}});
+example({output: {v: {$min: {input: "$a"}}}});
+example({output: {v: {$mergeObjects: {input: "$a"}}}});
+// TODO maybe instead hook into REGISTER_ACCUMULATOR so we can pass flags like:
+// - is it order sensitive?
+// - should you skip registering it as a window function (JS)?
+example({output: {v: {$first: {input: "$a"}}}});
+example({output: {v: {$last: {input: "$a"}}}});
+example({output: {v: {$accumulator: {input: "$a"}}}});
+
 
 // $rank doesn't take an input.
 // But it requires a sortBy.

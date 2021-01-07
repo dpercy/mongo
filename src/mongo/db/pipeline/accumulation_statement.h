@@ -44,12 +44,12 @@ namespace mongo {
  * REGISTER_ACCUMULATOR(foo, AccumulatorFoo::create);
  */
 #define REGISTER_ACCUMULATOR(key, factory)                                            \
-    MONGO_INITIALIZER(addToAccumulatorFactoryMap_##key)(InitializerContext*) {        \
-        AccumulationStatement::registerAccumulator("$" #key, (factory), boost::none); \
-    }
+    REGISTER_ACCUMULATOR_WITH_MIN_VERSION(key, factory, boost::none)
 
 #define REGISTER_ACCUMULATOR_WITH_MIN_VERSION(key, factory, minVersion)                \
-    MONGO_INITIALIZER(addToAccumulatorFactoryMap_##key)(InitializerContext*) {         \
+    MONGO_INITIALIZER_GENERAL(addToAccumulatorFactoryMap_##key,                        \
+                              (),                                                      \
+                              ("accumulatorParserMap"))(InitializerContext*) {             \
         AccumulationStatement::registerAccumulator("$" #key, (factory), (minVersion)); \
     }
 
@@ -168,6 +168,13 @@ public:
         std::string name,
         Parser parser,
         boost::optional<ServerGlobalParams::FeatureCompatibility::Version> requiredMinVersion);
+
+    /**
+     * List the names of accumulators that have been registered with registerAccumulator.
+     * 
+     * TODO return requiredMinVersion too
+     */
+    static std::vector<std::string> getRegisteredAccumulators();
 
     /**
      * Retrieves the Parser for the accumulator specified by the given name, and raises an error if
