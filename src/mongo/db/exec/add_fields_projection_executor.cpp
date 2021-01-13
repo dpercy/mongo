@@ -225,7 +225,7 @@ std::unique_ptr<AddFieldsProjectionExecutor> AddFieldsProjectionExecutor::create
 
     // This helper is only meant for creating top-level fields. Dotted field paths require
     // thinking about implicit array traversal.
-    tassert(0,
+    tassert(5339700,
             str::stream() << "Expected a top-level field name, but got " << fieldPath.fullPath(),
             fieldPath.getPathLength() == 1);
 

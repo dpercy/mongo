@@ -105,7 +105,7 @@ boost::intrusive_ptr<DocumentSource> DocumentSourceProject::createUnset(
 
     // This helper is only meant for removing top-level fields. Dotted field paths require
     // thinking about implicit array traversal.
-    tassert(0,
+    tassert(5339701,
             str::stream() << "Expected a top-level field name, but got " << fieldPath.fullPath(),
             fieldPath.getPathLength() == 1);
 
