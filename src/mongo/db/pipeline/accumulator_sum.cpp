@@ -38,7 +38,6 @@
 #include "mongo/db/pipeline/accumulation_statement.h"
 #include "mongo/db/pipeline/expression.h"
 #include "mongo/db/pipeline/window_function_expression.h"
-#include "mongo/db/query/query_feature_flags_gen.h"
 #include "mongo/util/summation.h"
 
 namespace mongo {

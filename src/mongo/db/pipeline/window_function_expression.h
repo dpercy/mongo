@@ -31,6 +31,7 @@
 
 #include "mongo/db/pipeline/document_source.h"
 #include "mongo/db/pipeline/document_source_set_window_fields_gen.h"
+#include "mongo/db/query/query_feature_flags_gen.h"
 
 #define REGISTER_WINDOW_FUNCTION(name, parser)                                              \
     MONGO_INITIALIZER_GENERAL(addToWindowFunctionMap_##name,                                \
