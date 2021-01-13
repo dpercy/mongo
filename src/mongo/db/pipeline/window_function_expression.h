@@ -32,6 +32,17 @@
 #include "mongo/db/pipeline/document_source.h"
 #include "mongo/db/pipeline/document_source_set_window_fields_gen.h"
 
+#define REGISTER_WINDOW_FUNCTION(name, parser)                                              \
+    MONGO_INITIALIZER_GENERAL(addToWindowFunctionMap_##name,                                \
+                              (),                                                           \
+                              ())(InitializerContext*) {                                    \
+        if (!::mongo::feature_flags::gFeatureFlagWindowFunctions.isEnabledAndIgnoreFCV()) { \
+            return Status::OK();                                                                         \
+        }                                                                                   \
+        WindowFunctionExpression::registerParser(#name, parser);                           \
+        return Status::OK();                                                                \
+    }
+
 namespace mongo {
 
 /**
@@ -142,6 +153,49 @@ struct WindowBounds {
     static WindowBounds parse(BSONObj args, ExpressionContext* expCtx);
 
     void serialize(MutableDocument& args) const;
+};
+
+class WFEAccumulator : public WindowFunctionExpression {
+public:
+    static boost::intrusive_ptr<WindowFunctionExpression> parse(
+        BSONElement elem,
+        boost::optional<BSONObj> sortBy, 
+        ExpressionContext* expCtx) {
+        // 'elem' is something like '$sum: {input: E, ...}'
+        std::string accumulatorName = elem.fieldName();
+        boost::intrusive_ptr<Expression> input = Expression::parseOperand(
+            expCtx,
+            elem.Obj()["input"],
+            expCtx->variablesParseState);
+        auto bounds = WindowBounds::parse(elem.Obj(), expCtx);
+        return make_intrusive<WFEAccumulator>(
+            std::move(accumulatorName),
+            std::move(input),
+            std::move(bounds));
+    }
+    Value serialize(boost::optional<ExplainOptions::Verbosity> explain) const final {
+        MutableDocument args;
+
+        args["input"] = input->serialize(static_cast<bool>(explain));
+        bounds.serialize(args);
+
+        return Value{Document{
+            {accumulatorName, args.freezeToValue()},
+        }};
+    }
+
+    WFEAccumulator(
+        std::string accumulatorName,
+        boost::intrusive_ptr<Expression> input,
+        WindowBounds bounds)
+    : accumulatorName(std::move(accumulatorName)),
+      input(std::move(input)),
+      bounds(std::move(bounds)) {}
+
+private:
+    std::string accumulatorName;
+    boost::intrusive_ptr<Expression> input;
+    WindowBounds bounds;
 };
 
 }

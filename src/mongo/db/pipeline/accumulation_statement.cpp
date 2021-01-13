@@ -63,13 +63,6 @@ void AccumulationStatement::registerAccumulator(
             it == parserMap.end());
     parserMap[name] = {parser, requiredMinVersion};
 }
-std::vector<std::string> AccumulationStatement::getRegisteredAccumulators() {
-    std::vector<std::string> result;
-    for (auto&& [name, parser] : parserMap) {
-        result.push_back(name);
-    }
-    return result;
-}
 
 AccumulationStatement::Parser& AccumulationStatement::getParser(
     StringData name,

@@ -170,13 +170,6 @@ public:
         boost::optional<ServerGlobalParams::FeatureCompatibility::Version> requiredMinVersion);
 
     /**
-     * List the names of accumulators that have been registered with registerAccumulator.
-     * 
-     * TODO return requiredMinVersion too
-     */
-    static std::vector<std::string> getRegisteredAccumulators();
-
-    /**
      * Retrieves the Parser for the accumulator specified by the given name, and raises an error if
      * there is no such Parser registered, or the Parser is registered under an FCV greater than the
      * specified maximum allowed FCV.
