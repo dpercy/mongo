@@ -37,11 +37,11 @@ namespace mongo {
 
 struct WindowFunctionStatement {
     std::string fieldName; // top-level fieldname, not a path
-    boost::intrusive_ptr<WindowFunctionExpression> expr;
+    boost::intrusive_ptr<window_function::Expression> expr;
 
     WindowFunctionStatement(
         std::string fieldName,
-        boost::intrusive_ptr<WindowFunctionExpression> expr)
+        boost::intrusive_ptr<window_function::Expression> expr)
     : fieldName(std::move(fieldName)),
       expr(std::move(expr)) {}
 

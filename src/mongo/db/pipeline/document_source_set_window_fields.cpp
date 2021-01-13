@@ -40,6 +40,7 @@
 using boost::intrusive_ptr;
 using boost::optional;
 using std::list;
+namespace wf = mongo::window_function;
 
 namespace mongo {
 
@@ -99,7 +100,7 @@ WindowFunctionStatement WindowFunctionStatement::parse(
             elem.type() == BSONType::Object && elem.Obj().nFields() == 1);
     return WindowFunctionStatement(
         elem.fieldName(),
-        WindowFunctionExpression::parse(elem.Obj().firstElement(), sortBy, expCtx));
+        wf::Expression::parse(elem.Obj().firstElement(), sortBy, expCtx));
 }
 void WindowFunctionStatement::serialize(
         MutableDocument& outputFields, boost::optional<ExplainOptions::Verbosity> explain) const {
@@ -232,13 +233,6 @@ boost::intrusive_ptr<DocumentSource> DocumentSourceInternalSetWindowFields::crea
         else
             return boost::none;
     }();
-<<<<<<< HEAD
-    return make_intrusive<DocumentSourceInternalSetWindowFields>(
-        expCtx, partitionBy, spec.getSortBy(), spec.getOutput());
-||||||| merged common ancestors
-    return make_intrusive<DocumentSourceSetWindowFieldsAssumeSorted>(
-        expCtx, partitionBy, spec.getSortBy(), spec.getOutput());
-=======
 
     auto sortBy = spec.getSortBy();
 
@@ -247,9 +241,8 @@ boost::intrusive_ptr<DocumentSource> DocumentSourceInternalSetWindowFields::crea
         outputFields.push_back(WindowFunctionStatement::parse(elem, sortBy, expCtx.get()));
     }
 
-    return make_intrusive<DocumentSourceSetWindowFieldsAssumeSorted>(
+    return make_intrusive<DocumentSourceInternalSetWindowFields>(
         expCtx, partitionBy, sortBy, outputFields);
->>>>>>> some parsing
 }
 
 

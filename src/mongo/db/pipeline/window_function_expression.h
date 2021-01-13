@@ -37,13 +37,15 @@
                               (),                                                           \
                               ())(InitializerContext*) {                                    \
         if (!::mongo::feature_flags::gFeatureFlagWindowFunctions.isEnabledAndIgnoreFCV()) { \
-            return Status::OK();                                                                         \
+            return Status::OK();                                                            \
         }                                                                                   \
-        WindowFunctionExpression::registerParser(#name, parser);                           \
+        namespace wf = ::mongo::window_function;                                            \
+        ::mongo::window_function::Expression::registerParser(#name, parser);                \
         return Status::OK();                                                                \
     }
 
 namespace mongo {
+namespace window_function {
 
 /**
  * A window-function expression describes how to compute a single output value in a
@@ -66,7 +68,7 @@ namespace mongo {
  * - TODO dependency analysis?
  * - TODO rewrites?
  */
-class WindowFunctionExpression : public RefCountable {
+class Expression : public RefCountable {
 public:
     /**
      * Parses a single window-function expression. The BSONElement's key is the function name,
@@ -76,7 +78,7 @@ public:
      * a sort spec, or require a one-field sort spec; they use this argument to enforce those
      * requirements.
      */
-    static boost::intrusive_ptr<WindowFunctionExpression> parse(
+    static boost::intrusive_ptr<Expression> parse(
         BSONElement elem, boost::optional<BSONObj> sortBy, ExpressionContext* expCtx);
 
     /**
@@ -89,7 +91,6 @@ public:
     virtual Value serialize(boost::optional<ExplainOptions::Verbosity> explain) const = 0;
 
     // TODO: another virtual method should create the execution state.
-    // Some window functions 
 
 private:
     static StringMap<Parser> parserMap;
@@ -155,20 +156,21 @@ struct WindowBounds {
     void serialize(MutableDocument& args) const;
 };
 
-class WFEAccumulator : public WindowFunctionExpression {
+template<class AccumulatorState>
+class ExpressionFromAccumulator : public Expression {
 public:
-    static boost::intrusive_ptr<WindowFunctionExpression> parse(
+    static boost::intrusive_ptr<Expression> parse(
         BSONElement elem,
         boost::optional<BSONObj> sortBy, 
         ExpressionContext* expCtx) {
         // 'elem' is something like '$sum: {input: E, ...}'
         std::string accumulatorName = elem.fieldName();
-        boost::intrusive_ptr<Expression> input = Expression::parseOperand(
+        boost::intrusive_ptr<::mongo::Expression> input = ::mongo::Expression::parseOperand(
             expCtx,
             elem.Obj()["input"],
             expCtx->variablesParseState);
         auto bounds = WindowBounds::parse(elem.Obj(), expCtx);
-        return make_intrusive<WFEAccumulator>(
+        return make_intrusive<ExpressionFromAccumulator<AccumulatorState>>(
             std::move(accumulatorName),
             std::move(input),
             std::move(bounds));
@@ -184,9 +186,9 @@ public:
         }};
     }
 
-    WFEAccumulator(
+    ExpressionFromAccumulator(
         std::string accumulatorName,
-        boost::intrusive_ptr<Expression> input,
+        boost::intrusive_ptr<::mongo::Expression> input,
         WindowBounds bounds)
     : accumulatorName(std::move(accumulatorName)),
       input(std::move(input)),
@@ -194,8 +196,9 @@ public:
 
 private:
     std::string accumulatorName;
-    boost::intrusive_ptr<Expression> input;
+    boost::intrusive_ptr<::mongo::Expression> input;
     WindowBounds bounds;
 };
 
+}
 }

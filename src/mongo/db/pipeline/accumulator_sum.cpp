@@ -47,7 +47,7 @@ using boost::intrusive_ptr;
 
 REGISTER_ACCUMULATOR(sum, genericParseSingleExpressionAccumulator<AccumulatorSum>);
 REGISTER_EXPRESSION(sum, ExpressionFromAccumulator<AccumulatorSum>::parse);
-REGISTER_WINDOW_FUNCTION(sum, WFEAccumulator::parse);
+REGISTER_WINDOW_FUNCTION(sum, wf::ExpressionFromAccumulator<AccumulatorSum>::parse);
 
 const char* AccumulatorSum::getOpName() const {
     return "$sum";

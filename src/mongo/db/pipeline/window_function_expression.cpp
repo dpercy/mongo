@@ -42,10 +42,12 @@
 using std::unordered_map;
 using boost::intrusive_ptr;
 using boost::optional;
+namespace wf = mongo::window_function;
+using wf::WindowBounds;
 
 namespace mongo {
 
-StringMap<WindowFunctionExpression::Parser> WindowFunctionExpression::parserMap;
+StringMap<wf::Expression::Parser> wf::Expression::parserMap;
 
 
 namespace {
@@ -66,7 +68,7 @@ WindowBounds::Bound<T> parseBound(
         }
     } else {
         // Expect a constant number expression.
-        auto expr = Expression::parseOperand(expCtx, elem, expCtx->variablesParseState);
+        auto expr = ::mongo::Expression::parseOperand(expCtx, elem, expCtx->variablesParseState);
         expr = expr->optimize();
         auto constant = dynamic_cast<ExpressionConstant*>(expr.get());
         uassert(ErrorCodes::FailedToParse,
@@ -166,7 +168,7 @@ void WindowBounds::serialize(MutableDocument& args) const {
 }
 
 
-intrusive_ptr<WindowFunctionExpression> WindowFunctionExpression::parse(
+intrusive_ptr<wf::Expression> wf::Expression::parse(
     BSONElement elem, optional<BSONObj> sortBy, ExpressionContext* expCtx) {
     auto parser = parserMap.find(elem.fieldName());
     uassert(ErrorCodes::FailedToParse,
@@ -181,7 +183,7 @@ intrusive_ptr<WindowFunctionExpression> WindowFunctionExpression::parse(
     return parser->second(elem, sortBy, expCtx);
 }
 
-void WindowFunctionExpression::registerParser(std::string functionName, Parser parser) {
+void wf::Expression::registerParser(std::string functionName, Parser parser) {
     invariant(parserMap.find(functionName) == parserMap.end());
     parserMap.emplace(std::move(functionName), std::move(parser));
 }
