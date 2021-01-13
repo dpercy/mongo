@@ -43,8 +43,8 @@ using boost::intrusive_ptr;
 using std::list;
 
 REGISTER_DOCUMENT_SOURCE(sortByCount,
-                           LiteParsedDocumentSourceDefault::parse,
-                           DocumentSourceSortByCount::createFromBson);
+                         LiteParsedDocumentSourceDefault::parse,
+                         DocumentSourceSortByCount::createFromBson);
 
 list<intrusive_ptr<DocumentSource>> DocumentSourceSortByCount::createFromBson(
     BSONElement elem, const intrusive_ptr<ExpressionContext>& pExpCtx) {

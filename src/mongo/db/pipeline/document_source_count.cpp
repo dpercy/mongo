@@ -44,8 +44,8 @@ using std::list;
 using std::string;
 
 REGISTER_DOCUMENT_SOURCE(count,
-                           LiteParsedDocumentSourceDefault::parse,
-                           DocumentSourceCount::createFromBson);
+                         LiteParsedDocumentSourceDefault::parse,
+                         DocumentSourceCount::createFromBson);
 
 list<intrusive_ptr<DocumentSource>> DocumentSourceCount::createFromBson(
     BSONElement elem, const intrusive_ptr<ExpressionContext>& pExpCtx) {

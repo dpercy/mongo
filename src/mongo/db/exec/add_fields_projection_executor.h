@@ -66,7 +66,7 @@ public:
 
     /**
      * Create a projection that binds an expression to a top-level field.
-     * 
+     *
      * 'fieldPath' must be a top-level field name (exactly one element; no dots).
      */
     static std::unique_ptr<AddFieldsProjectionExecutor> create(

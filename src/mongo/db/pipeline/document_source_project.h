@@ -73,8 +73,7 @@ public:
      * Create an '$unset' stage.
      */
     static boost::intrusive_ptr<DocumentSource> createUnset(
-        const FieldPath& fieldPath,
-        const boost::intrusive_ptr<ExpressionContext>& expCtx);
+        const FieldPath& fieldPath, const boost::intrusive_ptr<ExpressionContext>& expCtx);
 
     /**
      * Parses a $project stage from the user-supplied BSON.

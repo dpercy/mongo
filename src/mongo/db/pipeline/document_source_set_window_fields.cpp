@@ -37,9 +37,9 @@
 #include "mongo/db/pipeline/lite_parsed_document_source.h"
 #include "mongo/db/query/query_feature_flags_gen.h"
 
-using std::list;
 using boost::intrusive_ptr;
 using boost::optional;
+using std::list;
 
 namespace mongo {
 
@@ -122,9 +122,8 @@ list<intrusive_ptr<DocumentSource>> document_source_set_window_fields::create(
     // which will bind the value of the expression to the name in simplePartitionBy.
     if (partitionBy) {
         if (auto exprFieldPath = dynamic_cast<ExpressionFieldPath*>(partitionBy->get())) {
-            tassert(0,
-                    "partitionBy must be a field, not a variable",
-                    exprFieldPath->isRootFieldPath());
+            tassert(
+                0, "partitionBy must be a field, not a variable", exprFieldPath->isRootFieldPath());
 
             simplePartitionBy = exprFieldPath->getFieldPath();
             simplePartitionByExpr = partitionBy;
@@ -141,8 +140,8 @@ list<intrusive_ptr<DocumentSource>> document_source_set_window_fields::create(
 
     // $set
     if (complexPartitionBy) {
-        result.push_back(DocumentSourceAddFields::create(
-            *simplePartitionBy, *complexPartitionBy, expCtx));
+        result.push_back(
+            DocumentSourceAddFields::create(*simplePartitionBy, *complexPartitionBy, expCtx));
     }
 
     // $sort

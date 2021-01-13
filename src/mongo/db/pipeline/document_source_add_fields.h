@@ -54,7 +54,7 @@ public:
 
     /**
      * Create a stage that binds an expression to a top-level field.
-     * 
+     *
      * 'fieldPath' must be a top-level field name (exactly one element; no dots).
      */
     static boost::intrusive_ptr<DocumentSource> create(

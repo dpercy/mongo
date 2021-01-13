@@ -84,15 +84,13 @@ void DocumentSource::registerParser(
     SimpleParser simpleParser,
     boost::optional<ServerGlobalParams::FeatureCompatibility::Version> requiredMinVersion) {
 
-    Parser parser = [simpleParser=std::move(simpleParser)](
-        BSONElement stageSpec,
-        const intrusive_ptr<ExpressionContext>& expCtx) -> list<intrusive_ptr<DocumentSource>> {
+    Parser parser =
+        [simpleParser = std::move(simpleParser)](
+            BSONElement stageSpec,
+            const intrusive_ptr<ExpressionContext>& expCtx) -> list<intrusive_ptr<DocumentSource>> {
         return {simpleParser(std::move(stageSpec), expCtx)};
     };
-    return registerParser(
-        std::move(name),
-        std::move(parser),
-        std::move(requiredMinVersion));
+    return registerParser(std::move(name), std::move(parser), std::move(requiredMinVersion));
 }
 bool DocumentSource::hasQuery() const {
     return false;

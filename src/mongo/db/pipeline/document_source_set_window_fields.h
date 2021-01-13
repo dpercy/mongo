@@ -48,7 +48,7 @@ std::list<boost::intrusive_ptr<DocumentSource>> create(
     boost::optional<boost::intrusive_ptr<Expression>> partitionBy,
     boost::optional<BSONObj> sortBy,
     BSONObj fields);
-}
+}  // namespace document_source_set_window_fields
 
 class DocumentSourceSetWindowFieldsAssumeSorted final : public DocumentSource {
 public:
@@ -62,10 +62,11 @@ public:
         BSONElement elem, const boost::intrusive_ptr<ExpressionContext>& pExpCtx);
 
 
-    DocumentSourceSetWindowFieldsAssumeSorted(const boost::intrusive_ptr<ExpressionContext>& expCtx,
-                                  boost::optional<boost::intrusive_ptr<Expression>> partitionBy,
-                                  boost::optional<BSONObj> sortBy,
-                                  BSONObj fields)
+    DocumentSourceSetWindowFieldsAssumeSorted(
+        const boost::intrusive_ptr<ExpressionContext>& expCtx,
+        boost::optional<boost::intrusive_ptr<Expression>> partitionBy,
+        boost::optional<BSONObj> sortBy,
+        BSONObj fields)
         : DocumentSource(kStageName, expCtx),
           _partitionBy(partitionBy),
           _sortBy(std::move(sortBy)),
