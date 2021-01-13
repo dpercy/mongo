@@ -29,7 +29,7 @@ assert.commandFailedWithCode(coll.runCommand({
                              ErrorCodes.TypeMismatch);
 assert.commandFailedWithCode(coll.runCommand({
     aggregate: coll.getName(),
-    pipeline: [{$setWindowFields: {fields: "invalid"}}],
+    pipeline: [{$setWindowFields: {output: "invalid"}}],
     cursor: {}
 }),
                              ErrorCodes.TypeMismatch);
@@ -37,7 +37,7 @@ assert.commandFailedWithCode(coll.runCommand({
 // Test that parsing fails for an invalid partitionBy expression.
 assert.commandFailedWithCode(coll.runCommand({
     aggregate: coll.getName(),
-    pipeline: [{$setWindowFields: {partitionBy: {$notAnOperator: 1}, fields: {}}}],
+    pipeline: [{$setWindowFields: {partitionBy: {$notAnOperator: 1}, output: {}}}],
     cursor: {}
 }),
                              ErrorCodes.InvalidPipelineOperator);
@@ -52,7 +52,7 @@ assert.commandFailedWithCode(
 assert.commandWorked(coll.runCommand({
     aggregate: coll.getName(),
     pipeline:
-        [{$setWindowFields: {partitionBy: "$state", sortBy: {city: 1}, fields: {a: {$sum: 1}}}}],
+        [{$setWindowFields: {partitionBy: "$state", sortBy: {city: 1}, output: {a: {$sum: 1}}}}],
     cursor: {}
 }));
 })();
