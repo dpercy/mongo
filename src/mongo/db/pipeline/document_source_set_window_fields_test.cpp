@@ -54,14 +54,14 @@ TEST_F(DocumentSourceSetWindowFieldsTest, FailsToParseInvalidArgumentTypes) {
         ErrorCodes::FailedToParse);
 
     spec = BSON("$_setWindowFields_assumeSorted" << BSON("sortBy"
-                                           << "invalid sort spec"));
+                                                         << "invalid sort spec"));
     ASSERT_THROWS_CODE(
         DocumentSourceSetWindowFieldsAssumeSorted::createFromBson(spec.firstElement(), getExpCtx()),
         AssertionException,
         ErrorCodes::TypeMismatch);
 
     spec = BSON("$_setWindowFields_assumeSorted" << BSON("output"
-                                           << "invalid"));
+                                                         << "invalid"));
     ASSERT_THROWS_CODE(
         DocumentSourceSetWindowFieldsAssumeSorted::createFromBson(spec.firstElement(), getExpCtx()),
         AssertionException,
