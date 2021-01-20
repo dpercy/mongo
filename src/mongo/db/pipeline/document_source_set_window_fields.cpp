@@ -74,7 +74,11 @@ list<intrusive_ptr<DocumentSource>> document_source_set_window_fields::createFro
         else
             return boost::none;
     }();
-    return create(expCtx, partitionBy, spec.getSortBy(), spec.getOutput());
+    return create(
+        std::move(expCtx),
+        std::move(partitionBy),
+        std::move(spec.getSortBy()),
+        std::move(spec.getOutput()));
 }
 
 list<intrusive_ptr<DocumentSource>> document_source_set_window_fields::create(
@@ -108,6 +112,8 @@ list<intrusive_ptr<DocumentSource>> document_source_set_window_fields::create(
     // assert (in getNextInput()) that partitionBy is never an array.
 
     // If there is no partitionBy at all then we just $sort by the sortBy spec.
+
+    // If there is no sortBy and no partitionBy then we can omit the $sort stage completely.
 
     list<intrusive_ptr<DocumentSource>> result;
 

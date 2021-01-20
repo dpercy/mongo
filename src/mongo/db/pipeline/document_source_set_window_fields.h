@@ -35,7 +35,8 @@
 namespace mongo {
 
 /**
- * $setWindowFields is an alias for $set + $sort + $_internalSetWindowFields + $unset.
+ * $setWindowFields is an alias: it desugars to some combination of projection, sorting,
+ * and $_internalSetWindowFields.
  */
 namespace document_source_set_window_fields {
 constexpr StringData kStageName = "$setWindowFields"_sd;
