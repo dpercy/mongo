@@ -35,7 +35,7 @@
 namespace mongo {
 
 /**
- * $setWindowFields is an alias for $project + $sort + $_setWindowFields_assumeSorted.
+ * $setWindowFields is an alias for $set + $sort + $_internalSetWindowFields + $unset.
  */
 namespace document_source_set_window_fields {
 constexpr StringData kStageName = "$setWindowFields"_sd;
@@ -50,9 +50,9 @@ std::list<boost::intrusive_ptr<DocumentSource>> create(
     BSONObj fields);
 }  // namespace document_source_set_window_fields
 
-class DocumentSourceSetWindowFieldsAssumeSorted final : public DocumentSource {
+class DocumentSourceInternalSetWindowFields final : public DocumentSource {
 public:
-    static constexpr StringData kStageName = "$_setWindowFields_assumeSorted"_sd;
+    static constexpr StringData kStageName = "$_internalSetWindowFields"_sd;
 
     /**
      * Parses 'elem' into a $setWindowFields stage, or throws a AssertionException if 'elem' was an
@@ -62,7 +62,7 @@ public:
         BSONElement elem, const boost::intrusive_ptr<ExpressionContext>& pExpCtx);
 
 
-    DocumentSourceSetWindowFieldsAssumeSorted(
+    DocumentSourceInternalSetWindowFields(
         const boost::intrusive_ptr<ExpressionContext>& expCtx,
         boost::optional<boost::intrusive_ptr<Expression>> partitionBy,
         boost::optional<BSONObj> sortBy,

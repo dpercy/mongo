@@ -51,9 +51,9 @@ REGISTER_DOCUMENT_SOURCE_CONDITIONALLY(
     ::mongo::feature_flags::gFeatureFlagWindowFunctions.isEnabledAndIgnoreFCV());
 
 REGISTER_DOCUMENT_SOURCE_CONDITIONALLY(
-    _setWindowFields_assumeSorted,
+    _internalSetWindowFields,
     LiteParsedDocumentSourceDefault::parse,
-    DocumentSourceSetWindowFieldsAssumeSorted::createFromBson,
+    DocumentSourceInternalSetWindowFields::createFromBson,
     boost::none,
     ::mongo::feature_flags::gFeatureFlagWindowFunctions.isEnabledAndIgnoreFCV());
 
@@ -97,10 +97,10 @@ list<intrusive_ptr<DocumentSource>> document_source_set_window_fields::create(
     //     {$setWindowFields: {partitionBy: "$__tmp", sortBy: {y: 1}, fields: {...}}}
     //     {$unset: '__tmp'}
 
-    // Which lets us replace $setWindowFields with $_setWindowFields_assumeSorted:
+    // Which lets us replace $setWindowFields with $_internalSetWindowFields:
     //     {$set: {__tmp: {$foo: "$x"}}}
     //     {$sort: {__tmp: 1, y: 1}}
-    //     {$_setWindowFields_assumeSorted: {partitionBy: "$__tmp", sortBy: {y: 1}, fields: {...}}}
+    //     {$_internalSetWindowFields: {partitionBy: "$__tmp", sortBy: {y: 1}, fields: {...}}}
     //     {$unset: '__tmp'}
 
     // If partitionBy is a field path, we can $sort by that field directly and avoid creating a
@@ -158,8 +158,8 @@ list<intrusive_ptr<DocumentSource>> document_source_set_window_fields::create(
         result.push_back(DocumentSourceSort::create(expCtx, sortSpec.obj()));
     }
 
-    // $_setWindowFields_assumeSorted
-    result.push_back(make_intrusive<DocumentSourceSetWindowFieldsAssumeSorted>(
+    // $_internalSetWindowFields
+    result.push_back(make_intrusive<DocumentSourceInternalSetWindowFields>(
         expCtx, simplePartitionByExpr, sortBy, fields));
 
     // $unset
@@ -171,7 +171,7 @@ list<intrusive_ptr<DocumentSource>> document_source_set_window_fields::create(
 }
 
 
-Value DocumentSourceSetWindowFieldsAssumeSorted::serialize(
+Value DocumentSourceInternalSetWindowFields::serialize(
     boost::optional<ExplainOptions::Verbosity> explain) const {
     MutableDocument spec;
     spec[SetWindowFieldsSpec::kPartitionByFieldName] =
@@ -181,7 +181,7 @@ Value DocumentSourceSetWindowFieldsAssumeSorted::serialize(
     return Value(DOC(kStageName << spec.freeze()));
 }
 
-boost::intrusive_ptr<DocumentSource> DocumentSourceSetWindowFieldsAssumeSorted::createFromBson(
+boost::intrusive_ptr<DocumentSource> DocumentSourceInternalSetWindowFields::createFromBson(
     BSONElement elem, const boost::intrusive_ptr<ExpressionContext>& expCtx) {
     uassert(ErrorCodes::FailedToParse,
             str::stream() << "the " << kStageName
@@ -198,12 +198,12 @@ boost::intrusive_ptr<DocumentSource> DocumentSourceSetWindowFieldsAssumeSorted::
         else
             return boost::none;
     }();
-    return make_intrusive<DocumentSourceSetWindowFieldsAssumeSorted>(
+    return make_intrusive<DocumentSourceInternalSetWindowFields>(
         expCtx, partitionBy, spec.getSortBy(), spec.getOutput());
 }
 
 
-DocumentSource::GetNextResult DocumentSourceSetWindowFieldsAssumeSorted::doGetNext() {
+DocumentSource::GetNextResult DocumentSourceInternalSetWindowFields::doGetNext() {
     // This is a placeholder: it returns every input doc unchanged.
     return pSource->getNext();
 }
