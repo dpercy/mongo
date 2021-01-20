@@ -42,6 +42,19 @@ assert.commandFailedWithCode(coll.runCommand({
 }),
                              ErrorCodes.InvalidPipelineOperator);
 
+// Since partitionBy can be any expression, it can be a variable.
+assert.commandWorked(coll.runCommand({
+    aggregate: coll.getName(),
+    pipeline: [{$setWindowFields: {partitionBy: "$$NOW", output: {}}}],
+    cursor: {}
+}));
+assert.commandWorked(coll.runCommand({
+    aggregate: coll.getName(),
+    pipeline: [{$setWindowFields: {partitionBy: "$$myobj.a", output: {}}}],
+    let: {myobj: {a: 456}},
+    cursor: {}
+}));
+
 // Test that parsing fails for unrecognized parameters.
 assert.commandFailedWithCode(
     coll.runCommand(
@@ -55,4 +68,5 @@ assert.commandWorked(coll.runCommand({
         [{$setWindowFields: {partitionBy: "$state", sortBy: {city: 1}, output: {a: {$sum: 1}}}}],
     cursor: {}
 }));
+
 })();

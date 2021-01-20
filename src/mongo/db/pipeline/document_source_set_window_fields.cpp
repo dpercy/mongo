@@ -127,10 +127,8 @@ list<intrusive_ptr<DocumentSource>> document_source_set_window_fields::create(
     // If partitionBy is a more complex expression, we will need to generate a $set stage,
     // which will bind the value of the expression to the name in simplePartitionBy.
     if (partitionBy) {
-        if (auto exprFieldPath = dynamic_cast<ExpressionFieldPath*>(partitionBy->get())) {
-            tassert(
-                0, "partitionBy must be a field, not a variable", exprFieldPath->isRootFieldPath());
-
+        auto exprFieldPath = dynamic_cast<ExpressionFieldPath*>(partitionBy->get());
+        if (exprFieldPath && exprFieldPath->isRootFieldPath()) {
             simplePartitionBy = exprFieldPath->getFieldPath();
             simplePartitionByExpr = partitionBy;
         } else {
