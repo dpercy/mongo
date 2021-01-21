@@ -174,7 +174,6 @@ list<intrusive_ptr<DocumentSource>> document_source_set_window_fields::create(
     return result;
 }
 
-
 Value DocumentSourceInternalSetWindowFields::serialize(
     boost::optional<ExplainOptions::Verbosity> explain) const {
     MutableDocument spec;
