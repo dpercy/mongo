@@ -33,15 +33,23 @@ example({output: {v: {$sum: { input: "$a", range: [-3, 'unbounded'], unit: 'hour
 
 // Variety of accumulators:
 example({output: {v: {$sum: {input: "$a"}}}});
+example({output: {v: {$avg: {input: "$a"}}}});
 example({output: {v: {$max: {input: "$a"}}}});
 example({output: {v: {$min: {input: "$a"}}}});
-example({output: {v: {$mergeObjects: {input: "$a"}}}});
-// TODO maybe instead hook into REGISTER_ACCUMULATOR so we can pass flags like:
-// - is it order sensitive?
-// - should you skip registering it as a window function (JS)?
-example({output: {v: {$first: {input: "$a"}}}});
-example({output: {v: {$last: {input: "$a"}}}});
-example({output: {v: {$accumulator: {input: "$a"}}}});
+// TODO just register these?
+///example({output: {v: {$first: {input: "$a"}}}});
+///example({output: {v: {$last: {input: "$a"}}}});
+
+// Not every accumulator is automatically a window function.
+function assertParseError(msg, f) {
+    let err = assert.throws(f);
+    assert.eq(err.code, ErrorCodes.FailedToParse);
+    assert.includes(err.toString(), msg);
+}
+assertParseError('No such window function: $mergeObjects', () =>
+    example({output: {v: {$mergeObjects: {input: "$a"}}}}));
+assertParseError('No such window function: $accumulator', () =>
+    example({output: {v: {$accumulator: {input: "$a"}}}}));
 
 
 // $rank doesn't take an input.

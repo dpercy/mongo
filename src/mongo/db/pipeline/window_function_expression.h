@@ -41,7 +41,7 @@
             return;                                                                         \
         }                                                                                   \
         namespace wf = ::mongo::window_function;                                            \
-        ::mongo::window_function::Expression::registerParser(#name, parser);                \
+        ::mongo::window_function::Expression::registerParser("$" #name, parser);                \
     }
 
 namespace mongo {
