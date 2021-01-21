@@ -38,11 +38,10 @@
                               (),                                                           \
                               ())(InitializerContext*) {                                    \
         if (!::mongo::feature_flags::gFeatureFlagWindowFunctions.isEnabledAndIgnoreFCV()) { \
-            return Status::OK();                                                            \
+            return;                                                                         \
         }                                                                                   \
         namespace wf = ::mongo::window_function;                                            \
         ::mongo::window_function::Expression::registerParser(#name, parser);                \
-        return Status::OK();                                                                \
     }
 
 namespace mongo {

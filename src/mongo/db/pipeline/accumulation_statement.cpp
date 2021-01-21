@@ -124,7 +124,6 @@ AccumulationStatement AccumulationStatement::parseAccumulationStatement(
 MONGO_INITIALIZER(accumulatorParserMap)(InitializerContext*) {
     // Nothing to do. This initializer exists to tie together all the individual initializers
     // defined by REGISTER_ACCUMULATOR / REGISTER_ACCUMULATOR_WITH_MIN_VERSION.
-    return Status::OK();
 }
 
 }  // namespace mongo
