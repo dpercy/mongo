@@ -65,7 +65,7 @@ assert.commandFailedWithCode(
 assert.commandWorked(coll.runCommand({
     aggregate: coll.getName(),
     pipeline:
-        [{$setWindowFields: {partitionBy: "$state", sortBy: {city: 1}, output: {a: {$sum: 1}}}}],
+        [{$setWindowFields: {partitionBy: "$state", sortBy: {city: 1}, output: {a: {$sum: {input: 1}}}}}],
     cursor: {}
 }));
 
