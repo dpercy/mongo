@@ -47,7 +47,7 @@ struct WindowFunctionStatement {
 
     static WindowFunctionStatement parse(
         BSONElement elem,
-        boost::optional<BSONObj> sortBy,
+        const boost::optional<SortPattern>& sortBy,
         ExpressionContext* expCtx);
     void serialize(
         MutableDocument& outputFields,
@@ -69,7 +69,7 @@ std::list<boost::intrusive_ptr<DocumentSource>> createFromBson(
 std::list<boost::intrusive_ptr<DocumentSource>> create(
     const boost::intrusive_ptr<ExpressionContext>& expCtx,
     boost::optional<boost::intrusive_ptr<Expression>> partitionBy,
-    boost::optional<BSONObj> sortBy,
+    const boost::optional<SortPattern>& sortBy,
     std::vector<WindowFunctionStatement> outputFields);
 }  // namespace document_source_set_window_fields
 
@@ -88,7 +88,7 @@ public:
     DocumentSourceInternalSetWindowFields(
         const boost::intrusive_ptr<ExpressionContext>& expCtx,
         boost::optional<boost::intrusive_ptr<Expression>> partitionBy,
-        boost::optional<BSONObj> sortBy,
+        const boost::optional<SortPattern>& sortBy,
         std::vector<WindowFunctionStatement> outputFields)
         : DocumentSource(kStageName, expCtx),
           _partitionBy(partitionBy),
@@ -123,7 +123,7 @@ private:
     DocumentSource::GetNextResult getNextInput();
 
     boost::optional<boost::intrusive_ptr<Expression>> _partitionBy;
-    boost::optional<BSONObj> _sortBy;
+    boost::optional<SortPattern> _sortBy;
     std::vector<WindowFunctionStatement> _outputFields;
 };
 

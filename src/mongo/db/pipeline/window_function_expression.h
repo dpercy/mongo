@@ -79,7 +79,7 @@ public:
      * requirements.
      */
     static boost::intrusive_ptr<Expression> parse(
-        BSONElement elem, boost::optional<BSONObj> sortBy, ExpressionContext* expCtx);
+        BSONElement elem, const boost::optional<SortPattern>& sortBy, ExpressionContext* expCtx);
 
     /**
      * A Parser has the same signature as parse(). The BSONElement is the whole expression, such
@@ -161,7 +161,7 @@ class ExpressionFromAccumulator : public Expression {
 public:
     static boost::intrusive_ptr<Expression> parse(
         BSONElement elem,
-        boost::optional<BSONObj> sortBy, 
+        const boost::optional<SortPattern>& sortBy, 
         ExpressionContext* expCtx) {
         // 'elem' is something like '$sum: {input: E, ...}'
         std::string accumulatorName = elem.fieldName();

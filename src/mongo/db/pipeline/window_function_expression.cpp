@@ -169,7 +169,7 @@ void WindowBounds::serialize(MutableDocument& args) const {
 
 
 intrusive_ptr<wf::Expression> wf::Expression::parse(
-    BSONElement elem, optional<BSONObj> sortBy, ExpressionContext* expCtx) {
+    BSONElement elem, const optional<SortPattern>& sortBy, ExpressionContext* expCtx) {
     auto parser = parserMap.find(elem.fieldName());
     uassert(ErrorCodes::FailedToParse,
             str::stream() << "No such window function: " << elem.fieldName(),
